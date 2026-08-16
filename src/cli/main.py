@@ -3,7 +3,7 @@ from rich import print as rprint
 
 from src.core.logger import setup_logging
 from src.core.registry import registry
-from src.cli.commands import comic
+from src.cli.commands import comic, archive
 
 # Dynamically discover and load all providers
 registry.load_all_providers()
@@ -14,6 +14,7 @@ app = typer.Typer(
 )
 
 app.add_typer(comic.app, name="comic")
+app.add_typer(archive.app, name="archive")
 
 @app.callback()
 def main(verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")):
