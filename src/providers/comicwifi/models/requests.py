@@ -16,3 +16,8 @@ class ChapterListRequest(BaseRequest):
 class ChapterImagesRequest(BaseRequest):
     comicId: str
     chapterId: str
+
+class ComicSearchRequest(BaseRequest):
+    key: str
+    page: int = 1
+    pageSize: int = 30

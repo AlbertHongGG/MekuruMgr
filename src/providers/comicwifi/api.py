@@ -1,6 +1,9 @@
+from typing import List
+from pydantic import TypeAdapter
+
 from src.providers.comicwifi.http_client import BaseHttpClient
-from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest
-from src.providers.comicwifi.models.responses import ComicDetail, ChapterList, ChapterReadData
+from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest
+from src.providers.comicwifi.models.responses import ComicDetail, ChapterList, ChapterReadData, SearchResultItem
 
 class ComicApiClient:
     """
@@ -22,3 +25,8 @@ class ComicApiClient:
         # Based on the intercepted event, reading a chapter is usually /api/comic/read
         raw_data = self._http.post("/api/comic/read", data=req.model_dump(by_alias=True))
         return ChapterReadData.model_validate(raw_data)
+
+    def search_comics(self, req: ComicSearchRequest) -> List[SearchResultItem]:
+        raw_data = self._http.post("/api/comic/search", data=req.model_dump(by_alias=True))
+        ta = TypeAdapter(List[SearchResultItem])
+        return ta.validate_python(raw_data)

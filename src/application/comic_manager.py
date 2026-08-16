@@ -52,3 +52,8 @@ class ComicManager:
     def get_available_providers(self) -> List[str]:
         """List all available providers."""
         return registry.list_providers()
+
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+        """Search for comics using the active provider."""
+        logger.info(f"Searching comics with keyword: [green]{keyword}[/] from [magenta]{self.provider.provider_id}[/]")
+        return self.provider.search_comics(keyword, page, page_size)

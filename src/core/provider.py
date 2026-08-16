@@ -36,3 +36,8 @@ class BaseComicProvider(ABC):
     def get_chapter_images(self, comic_id: str, chapter_id: str) -> List[PageImage]:
         """Fetch the actual image pages for a specific chapter."""
         pass
+
+    @abstractmethod
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+        """Search for comics matching a keyword."""
+        pass

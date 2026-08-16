@@ -8,7 +8,7 @@ from src.core.constants import BuiltinProvider
 
 from src.providers.comicwifi.http_client import BaseHttpClient
 from src.providers.comicwifi.api import ComicApiClient
-from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest
+from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,23 @@ class ComicWifiProvider(BaseComicProvider):
                 order=idx
             ))
         return pages
+
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+        req = ComicSearchRequest(key=keyword, page=page, pageSize=page_size)
+        raw_results = self._api.search_comics(req)
+        
+        # Mapping
+        comics = []
+        for item in raw_results:
+            mod = item.module_item
+            comics.append(Comic(
+                id=mod.id,
+                title=mod.name,
+                cover_url=mod.cover,
+                description=mod.desc,
+                tags=mod.tags
+            ))
+        return comics
 
 # Register this provider automatically when the module is imported
 registry.register(ComicWifiProvider)

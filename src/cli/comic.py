@@ -82,3 +82,55 @@ def list_chapters(
         )
 
     rprint(table)
+
+@comic_app.command(name="search")
+def search_comic(
+    keyword: str = typer.Argument(..., help="The keyword to search for."),
+    page: int = typer.Option(1, help="Page number."),
+    page_size: int = typer.Option(30, help="Number of items per page."),
+    provider_id: str = typer.Option(
+        None, "--provider", "-p", help="Provider ID. Uses env default if omitted."
+    )
+):
+    """Search for comics by keyword."""
+    provider_id = provider_id or app_settings.default_provider
+    manager = ComicManager()
+    manager.use(provider_id)
+
+    with console.status(f"Searching for '{keyword}' from {provider_id}...", spinner="dots"):
+        comics = manager.search_comics(keyword, page, page_size)
+        
+    table = Table(title=f"[{manager.provider.provider_name}] Search Results for '{keyword}'")
+    table.add_column("ID", style="magenta")
+    table.add_column("Title", style="green")
+    table.add_column("Tags", style="yellow")
+    
+    for c in comics:
+        table.add_row(c.id, c.title, ", ".join(c.tags))
+
+    rprint(table)
+
+@comic_app.command(name="list-images")
+def list_images(
+    comic_id: str = typer.Argument(..., help="The ID of the comic."),
+    chapter_id: str = typer.Argument(..., help="The ID of the chapter."),
+    provider_id: str = typer.Option(
+        None, "--provider", "-p", help="Provider ID. Uses env default if omitted."
+    )
+):
+    """Fetch and display all images of a specific chapter."""
+    provider_id = provider_id or app_settings.default_provider
+    manager = ComicManager()
+    manager.use(provider_id)
+
+    with console.status(f"Fetching images for comic {comic_id}, chapter {chapter_id}...", spinner="dots"):
+        images = manager.fetch_chapter_images(comic_id, chapter_id)
+        
+    table = Table(title=f"[{manager.provider.provider_name}] Images for Chapter {chapter_id}")
+    table.add_column("Order", justify="right", style="cyan", no_wrap=True)
+    table.add_column("URL", style="green")
+    
+    for img in images:
+        table.add_row(str(img.order), img.url)
+
+    rprint(table)

@@ -38,3 +38,13 @@ class ChapterImage(BaseResponse):
 
 class ChapterReadData(BaseResponse):
     imgs: List[ChapterImage] = Field(default_factory=list)
+
+class SearchModuleItem(BaseResponse):
+    id: str
+    name: str
+    cover: str
+    tags: List[str] = Field(default_factory=list)
+    desc: str = ""
+
+class SearchResultItem(BaseResponse):
+    module_item: SearchModuleItem

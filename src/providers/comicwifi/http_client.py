@@ -33,7 +33,7 @@ class BaseHttpClient:
         retry=retry_if_exception_type(NetworkError),
         reraise=True
     )
-    def post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def post(self, endpoint: str, data: Dict[str, Any]) -> Any:
         """
         Sends a POST request. The auth interceptor automatically injects requestTime and sign.
         """
