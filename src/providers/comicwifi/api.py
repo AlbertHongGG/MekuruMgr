@@ -1,6 +1,6 @@
-from src.core.http_client import BaseHttpClient
-from src.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest
-from src.models.responses import ComicDetail, ChapterList, ChapterReadData
+from src.providers.comicwifi.http_client import BaseHttpClient
+from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest
+from src.providers.comicwifi.models.responses import ComicDetail, ChapterList, ChapterReadData
 
 class ComicApiClient:
     """

@@ -3,6 +3,9 @@ import structlog
 from src.manager.comic_manager import ComicManager
 from src.core.exceptions import AppBaseError
 
+# IMPORT PROVIDERS TO REGISTER THEM
+import src.providers.comicwifi.provider
+
 # Setup structlog for clean, readable output
 structlog.configure(
     processors=[
@@ -23,28 +26,37 @@ def main():
     logger.info("application_start")
 
     try:
-        with ComicManager() as manager:
-            # 1. Fetch Detail
-            logger.info(">>> Step 1: Fetching Comic Detail")
-            detail = manager.fetch_comic_detail(comic_id)
-            print(f"Title: {detail.name}")
-            print(f"Tags: {', '.join(detail.tags)}")
-            print(f"Description: {detail.desc}")
+        # Initialize the generic manager
+        manager = ComicManager()
+        
+        # Check what providers are available
+        available = manager.get_available_providers()
+        logger.info("available_providers", providers=available)
 
-            # 2. Fetch Chapters
-            logger.info(">>> Step 2: Fetching Chapter List")
-            chapters = manager.fetch_all_chapters(comic_id)
-            print(f"Total Chapters Found: {len(chapters)}")
+        # Tell the manager to use the "comicwifi" plugin
+        manager.use("comicwifi")
 
-            if chapters:
-                # 3. Fetch First Chapter Images
-                first_chapter = chapters[0]
-                logger.info(">>> Step 3: Fetching Images for First Chapter", chapter_name=first_chapter.chapter_name)
-                images = manager.fetch_chapter_images(comic_id, str(first_chapter.chapter_id))
-                
-                print(f"Found {len(images)} images in chapter '{first_chapter.chapter_name}'.")
-                for idx, img in enumerate(images, 1):
-                    print(f"  Image {idx}: {img.url} ({img.width}x{img.height})")
+        # 1. Fetch Detail (Now returns Standardized Core.Comic Model)
+        logger.info(">>> Step 1: Fetching Comic Detail")
+        detail = manager.fetch_comic_detail(comic_id)
+        print(f"[{manager.provider.provider_name}] Title: {detail.title}")
+        print(f"Tags: {', '.join(detail.tags)}")
+        print(f"Description: {detail.description}")
+
+        # 2. Fetch Chapters (Standardized Core.Chapter List)
+        logger.info(">>> Step 2: Fetching Chapter List")
+        chapters = manager.fetch_all_chapters(comic_id)
+        print(f"Total Chapters Found: {len(chapters)}")
+
+        if chapters:
+            # 3. Fetch First Chapter Images (Standardized Core.PageImage List)
+            first_chapter = chapters[0]
+            logger.info(">>> Step 3: Fetching Images for First Chapter", chapter_title=first_chapter.title)
+            images = manager.fetch_chapter_images(comic_id, first_chapter.id)
+            
+            print(f"Found {len(images)} images in chapter '{first_chapter.title}'.")
+            for img in images:
+                print(f"  Page {img.order + 1}: {img.url} ({img.width}x{img.height})")
 
     except AppBaseError as e:
         logger.error("application_error", error=str(e))

@@ -4,8 +4,8 @@ from typing import Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.core.exceptions import NetworkError, ApiLogicError
-from src.core.auth import ComicWifiAuth
-from src.core.config import settings
+from src.providers.comicwifi.auth import ComicWifiAuth
+from src.providers.comicwifi.config import settings
 
 logger = structlog.get_logger(__name__)
 
