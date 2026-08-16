@@ -12,6 +12,7 @@ from src.storage.factory import StorageFactory, StorageEngine
 
 from src.server.comics import comic_router
 from src.server.archive import archive_router
+from src.server.library import library_router
 
 # --- Startup & Setup ---
 
@@ -54,3 +55,4 @@ app.mount("/media", StaticFiles(directory=storage.data_dir), name="media")
 
 app.include_router(comic_router)
 app.include_router(archive_router)
+app.include_router(library_router)
