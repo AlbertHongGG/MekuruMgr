@@ -1,63 +1,57 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from typing import List
-import structlog
+from src.application.comic_manager import ComicManager
+from src.application.archiver_engine import ArchiverEngine
+from src.storage.factory import StorageFactory, StorageEngine
+from src.domain.models import ArchivedComic
 
-from src.storage.local_storage import storage
-from src.storage.models import ArchivedComic
-from src.archiver.service import ArchiverService
-from src.manager.comic_manager import ComicManager
-
-logger = structlog.get_logger(__name__)
-router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
+archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
 def get_archiver():
     manager = ComicManager()
-    return ArchiverService(manager)
+    return ArchiverEngine(manager)
 
-@router.get("/", response_model=List[ArchivedComic])
+@archive_router.get("/", response_model=List[ArchivedComic])
 def list_archived_comics():
     """List all locally archived comics."""
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
     return storage.list_comics()
 
-@router.get("/{provider_id}/{comic_id}", response_model=ArchivedComic)
+@archive_router.get("/{provider_id}/{comic_id}", response_model=ArchivedComic)
 def get_archived_comic(provider_id: str, comic_id: str):
     """Get metadata for a specific archived comic."""
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
     comic = storage.get_comic(provider_id, comic_id)
     if not comic:
         raise HTTPException(status_code=404, detail="Archived comic not found")
     return comic
 
-@router.post("/{provider_id}/{comic_id}/track")
+@archive_router.post("/{provider_id}/{comic_id}/track")
 async def track_comic(
     provider_id: str, 
     comic_id: str, 
-    archiver: ArchiverService = Depends(get_archiver)
+    archiver: ArchiverEngine = Depends(get_archiver)
 ):
-    """
-    Add a comic to the tracking library without downloading chapters.
-    """
+    """Add a comic to the tracking library without downloading chapters."""
     archived = await archiver.track_comic(provider_id, comic_id)
     return {"message": f"Successfully tracked comic {comic_id}", "data": archived}
 
-@router.post("/{provider_id}/{comic_id}/sync")
+@archive_router.post("/{provider_id}/{comic_id}/sync")
 async def sync_comic(
     provider_id: str, 
     comic_id: str, 
     background_tasks: BackgroundTasks,
-    archiver: ArchiverService = Depends(get_archiver)
+    archiver: ArchiverEngine = Depends(get_archiver)
 ):
-    """
-    Perform an incremental sync in the background.
-    Downloads only missing or failed chapters.
-    """
+    """Perform an incremental sync in the background."""
     background_tasks.add_task(archiver.sync_comic, provider_id, comic_id)
     return {"message": f"Incremental sync started for {comic_id} on {provider_id} in the background."}
 
-@router.delete("/{provider_id}/{comic_id}")
+@archive_router.delete("/{provider_id}/{comic_id}")
 def delete_archived_comic(
     provider_id: str, 
     comic_id: str,
-    archiver: ArchiverService = Depends(get_archiver)
+    archiver: ArchiverEngine = Depends(get_archiver)
 ):
     """Delete an archived comic and all its local files."""
     try:

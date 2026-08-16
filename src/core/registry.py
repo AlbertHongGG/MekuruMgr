@@ -3,7 +3,7 @@ import importlib
 from pathlib import Path
 from typing import Dict
 from src.core.provider import BaseComicProvider
-from src.core.exceptions import AppBaseError
+from src.domain.exceptions import AppBaseError
 
 logger = structlog.get_logger(__name__)
 

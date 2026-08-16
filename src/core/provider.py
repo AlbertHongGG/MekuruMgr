@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List
-from src.core.domain_models import Comic, Chapter, PageImage
+from typing import List, Dict, Any, TypeVar
+
+from src.domain.models import Comic, Chapter, PageImage
 
 class BaseComicProvider(ABC):
     """

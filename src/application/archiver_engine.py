@@ -7,21 +7,21 @@ import structlog
 import aiofiles
 from datetime import datetime
 
-from src.manager.comic_manager import ComicManager
-from src.storage.local_storage import storage
-from src.storage.models import ArchivedComic, ArchivedChapter, DownloadStatus
-from src.core.exceptions import AppBaseError
+from src.application.comic_manager import ComicManager
+from src.storage.factory import StorageFactory, StorageEngine
+from src.domain.models import ArchivedComic, ArchivedChapter, DownloadStatus
+from src.domain.exceptions import AppBaseError
 
 logger = structlog.get_logger(__name__)
 
-class ArchiverService:
+class ArchiverEngine:
     """
     Orchestrates the tracking and syncing of comics to local storage.
     Uses an Incremental Sync architecture to avoid re-downloading existing chapters.
     """
     def __init__(self, manager: ComicManager, max_concurrent_downloads: int = 5):
         self.manager = manager
-        self.storage = storage
+        self.storage = StorageFactory.get_storage(StorageEngine.JSON)
         self.semaphore = asyncio.Semaphore(max_concurrent_downloads)
 
     async def _download_image(self, client: httpx.AsyncClient, url: str, dest_path: Path):

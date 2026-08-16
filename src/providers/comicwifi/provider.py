@@ -2,7 +2,7 @@ from typing import List
 import structlog
 
 from src.core.provider import BaseComicProvider
-from src.core.domain_models import Comic, Chapter, PageImage
+from src.domain.models import Comic, Chapter, PageImage
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 

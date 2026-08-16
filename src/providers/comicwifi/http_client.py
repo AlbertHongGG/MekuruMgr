@@ -3,7 +3,7 @@ import structlog
 from typing import Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from src.core.exceptions import NetworkError, ApiLogicError
+from src.domain.exceptions import NetworkError, ApiLogicError
 from src.providers.comicwifi.auth import ComicWifiAuth
 from src.providers.comicwifi.config import settings
 

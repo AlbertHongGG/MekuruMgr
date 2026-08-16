@@ -1,7 +1,31 @@
-from pydantic import BaseModel, Field
-from typing import Dict, List
-from datetime import datetime
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Optional, Dict
 from enum import Enum
+from datetime import datetime
+
+class PageImage(BaseModel):
+    url: str
+    width: int = 0
+    height: int = 0
+    order: int = 0
+
+class Chapter(BaseModel):
+    id: str
+    title: str
+    order: float = 0.0
+    cover_url: str = ""
+    is_vip: bool = False
+    publish_time: str = ""
+
+class Comic(BaseModel):
+    id: str
+    title: str
+    cover_url: str
+    author: str = ""
+    description: str = ""
+    tags: List[str] = Field(default_factory=list)
+    update_status: str = ""
+    model_config = ConfigDict(extra="ignore")
 
 class DownloadStatus(str, Enum):
     PENDING = "pending"

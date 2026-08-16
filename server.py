@@ -1,14 +1,56 @@
-import uvicorn
-from src.core.config import app_settings
+import structlog
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-if __name__ == "__main__":
-    print(f"啟動 ComicMgr 伺服器於 {app_settings.host}:{app_settings.port} ...")
+from src.core.logger import setup_logging
+from src.core.registry import registry
+from src.core.config import app_settings
+from src.storage.factory import StorageFactory, StorageEngine
+
+from src.server.comics import comic_router
+from src.server.archive import archive_router
+
+# --- Startup & Setup ---
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    setup_logging(log_level=logging.DEBUG if app_settings.debug else logging.INFO)
+    logger = structlog.get_logger(__name__)
+    logger.info("server_starting", debug=app_settings.debug)
     
-    # 啟動 Uvicorn 伺服器
-    # 這裡我們開啟了 reload=True，方便您在開發階段修改程式碼時，伺服器會自動重啟
-    uvicorn.run(
-        "src.server.app:app",
-        host=app_settings.host,
-        port=app_settings.port,
-        reload=True
-    )
+    # Load all provider plugins
+    registry.load_all_providers()
+    logger.info("providers_loaded", count=len(registry.list_providers()))
+    
+    yield
+    # Shutdown
+    logger.info("server_shutting_down")
+
+app = FastAPI(
+    title="ComicMgr API",
+    description="Extensible Comic Management Platform API",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- Static File Serving (CDN) ---
+
+storage = StorageFactory.get_storage(StorageEngine.JSON)
+app.mount("/media", StaticFiles(directory=storage.data_dir), name="media")
+
+# --- Routers ---
+
+app.include_router(comic_router)
+app.include_router(archive_router)

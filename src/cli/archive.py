@@ -4,19 +4,19 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
 
-from src.archiver.service import ArchiverService
-from src.manager.comic_manager import ComicManager
-from src.storage.local_storage import storage
-from src.storage.models import DownloadStatus
 from src.core.config import app_settings
+from src.application.comic_manager import ComicManager
+from src.application.archiver_engine import ArchiverEngine
+from src.storage.factory import StorageFactory, StorageEngine
+from src.domain.models import DownloadStatus
 
-app = typer.Typer(help="Manage local comic archives")
+archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete)")
 
 def get_archiver():
     manager = ComicManager()
-    return ArchiverService(manager)
+    return ArchiverEngine(manager)
 
-@app.command(name="track")
+@archive_app.command(name="track")
 def track_comic(
     comic_id: str = typer.Argument(
         None, help="The ID of the comic to track. Uses env default if omitted."
@@ -45,7 +45,7 @@ def track_comic(
         title="[bold]Tracking Complete[/bold]"
     ))
 
-@app.command(name="sync")
+@archive_app.command(name="sync")
 def sync_comic(
     comic_id: str = typer.Argument(
         None, help="The ID of the comic to sync. Uses env default if omitted."
@@ -75,9 +75,10 @@ def sync_comic(
         title="[bold]Sync Complete[/bold]"
     ))
 
-@app.command(name="list")
+@archive_app.command(name="list")
 def list_archives():
     """List all locally archived comics."""
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
     comics = storage.list_comics()
     
     if not comics:
@@ -107,7 +108,7 @@ def list_archives():
         
     rprint(table)
 
-@app.command(name="delete")
+@archive_app.command(name="delete")
 def delete_archive(
     comic_id: str = typer.Argument(..., help="The ID of the comic to delete"),
     provider_id: str = typer.Option(

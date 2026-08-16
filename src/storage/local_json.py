@@ -5,22 +5,27 @@ from typing import Dict, Optional, List
 import structlog
 from pydantic import TypeAdapter
 
-from src.storage.models import ArchivedComic
+from src.domain.models import ArchivedComic
+from src.storage.interface import IStorage
 
 logger = structlog.get_logger(__name__)
 
-class LocalLibraryStorage:
+class LocalJsonStorage(IStorage):
     """
     Thread-safe storage manager for the local comic library.
     It handles reading and atomic writing to a central library.json file.
     """
     def __init__(self, data_dir: str = "data"):
-        self.data_dir = Path(data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.db_path = self.data_dir / "library.json"
+        self._data_dir = Path(data_dir)
+        self._data_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = self._data_dir / "library.json"
         self._lock = threading.RLock()
         self._cache: Dict[str, ArchivedComic] = {}
         self._load_db()
+
+    @property
+    def data_dir(self) -> Path:
+        return self._data_dir
 
     def _load_db(self):
         with self._lock:
@@ -42,15 +47,10 @@ class LocalLibraryStorage:
     def _save_db(self):
         with self._lock:
             try:
-                # Convert dict of Pydantic models to serializable dict
                 data = {k: v.model_dump(mode='json') for k, v in self._cache.items()}
-                
-                # Write to a temporary file first for atomic write (prevent corruption)
                 temp_path = self.db_path.with_suffix('.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                
-                # Replace the original file atomically
                 temp_path.replace(self.db_path)
             except Exception as e:
                 logger.error("failed_to_save_library_db", error=str(e))
@@ -79,6 +79,3 @@ class LocalLibraryStorage:
     def list_comics(self) -> List[ArchivedComic]:
         with self._lock:
             return list(self._cache.values())
-
-# Global singleton
-storage = LocalLibraryStorage()
