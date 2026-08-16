@@ -1,47 +1,43 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
-class AppConfig(BaseSettings):
+class ComicWifiConfig(BaseSettings):
     """
-    Application Configuration
-    Uses environment variables or .env file for easy overrides.
+    Configuration strictly bound to the 'COMICWIFI_' namespace in the .env file.
+    No hardcoded values are allowed here. Everything is loaded dynamically.
     """
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="COMICWIFI_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    base_url: str = Field(default="https://api.comicwifi.com", description="Comic API Base URL")
-    
+    # API Base URL
+    base_url: str = Field(default="https://api.comicwifi.com")
+
     # Device Fingerprinting Headers
-    # Defaults taken from the intercepted packet to avoid blocking
-    user_agent: str = Field(default="ktor-client")
-    device_id: str = Field(default="2c9b9cb61659a16b")
-    app_version: str = Field(default="1.1.1")
-    app_version_code: str = Field(default="111")
-    channel_no: str = Field(default="3")
-    app_channel: str = Field(default="3")
-    app_id: str = Field(default="6")
-    os_version: str = Field(default="13")
-    device_model: str = Field(default="SM-A326BR")
-    device_brand: str = Field(default="samsung")
-    device_make: str = Field(default="samsung")
-    screen_width: str = Field(default="720")
-    screen_height: str = Field(default="1445")
-    os_type: str = Field(default="1")
-    network_type: str = Field(default="0")
-    language: str = Field(default="zh")
-    device_language: str = Field(default="zh")
-    time_zone: str = Field(default="GMT+08:00")
-    lower_flow: str = Field(default="No")
-    imei: str = Field(default="")
-    mac: str = Field(default="")
-    oaid: str = Field(default="")
-    userid: str = Field(default="-1")
-    token: str = Field(default="")
-    isvpn: str = Field(default="")
-    languagecode: str = Field(default="")
+    user_agent: str
+    device_id: str
+    app_version: str
+    app_version_code: str
+    channel_no: str
+    app_channel: str
+    app_id: str
+    os_version: str
+    device_model: str
+    device_brand: str
+    device_make: str
+    screen_width: str
+    screen_height: str
+    os_type: str
+    network_type: str
+    language: str
+    device_language: str
+    time_zone: str
+    lower_flow: str
+    imei: str
+    mac: str
+    oaid: str
+    userid: str
+    token: str
+    isvpn: str
+    languagecode: str
 
     @property
     def http_headers(self) -> dict[str, str]:
@@ -79,4 +75,4 @@ class AppConfig(BaseSettings):
             "accept-encoding": "gzip",
         }
 
-settings = AppConfig()
+settings = ComicWifiConfig()

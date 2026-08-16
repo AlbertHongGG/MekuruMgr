@@ -6,18 +6,10 @@ from src.core.exceptions import AppBaseError
 # IMPORT PROVIDERS TO REGISTER THEM
 import src.providers.comicwifi.provider
 
+from src.core.logger import setup_logging
+
 # Setup structlog for clean, readable output
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
-        structlog.dev.ConsoleRenderer(
-            pad_event_to=0,
-            colors=sys.stdout.isatty(),
-            exception_formatter=structlog.dev.plain_traceback
-        )
-    ]
-)
+setup_logging()
 logger = structlog.get_logger(__name__)
 
 def main():
