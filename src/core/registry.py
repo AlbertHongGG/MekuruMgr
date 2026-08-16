@@ -1,45 +1,55 @@
-from typing import Dict, Type
 import structlog
+import importlib
+from pathlib import Path
+from typing import Dict
 from src.core.provider import BaseComicProvider
+from src.core.exceptions import AppBaseError
 
 logger = structlog.get_logger(__name__)
 
 class ProviderRegistry:
     """
-    A central registry to manage and instantiate different comic providers.
-    Follows the Factory pattern.
+    Central registry for all comic providers.
+    Uses the Singleton pattern to keep a single active registry.
     """
     def __init__(self):
-        self._providers: Dict[str, Type[BaseComicProvider]] = {}
-        self._instances: Dict[str, BaseComicProvider] = {}
+        self._providers: Dict[str, BaseComicProvider] = {}
 
-    def register(self, provider_class: Type[BaseComicProvider]) -> None:
-        """Register a new provider class."""
-        # Instantiate temporarily to get the ID, or require an ID attribute on the class.
-        # We can just instantiate it lazily or aggressively.
-        # For simplicity, we assume the class can be instantiated without args.
-        try:
-            temp_instance = provider_class()
-            pid = temp_instance.provider_id
-            self._providers[pid] = provider_class
-            logger.info("provider_registered", provider_id=pid, name=temp_instance.provider_name)
-        except Exception as e:
-            logger.error("provider_registration_failed", error=str(e), cls=provider_class.__name__)
+    def register(self, provider_class: type[BaseComicProvider]):
+        """Register a provider class with the system."""
+        provider = provider_class()
+        self._providers[provider.provider_id] = provider
+        logger.info("provider_registered", name=provider.provider_name, provider_id=provider.provider_id)
 
     def get_provider(self, provider_id: str) -> BaseComicProvider:
-        """Get or create an instance of a provider."""
+        """Retrieve an instantiated provider by its ID."""
         if provider_id not in self._providers:
-            raise ValueError(f"Provider '{provider_id}' is not registered.")
+            raise AppBaseError(f"Provider '{provider_id}' is not registered.")
+        return self._providers[provider_id]
+
+    def get_all(self) -> Dict[str, BaseComicProvider]:
+        return self._providers.copy()
+
+    def load_all_providers(self):
+        """
+        Dynamically discover and import all providers in the src.providers package.
+        This removes the need for manual imports in main entrypoints.
+        """
+        # Get the path to src/providers
+        providers_dir = Path(__file__).parent.parent / "providers"
         
-        if provider_id not in self._instances:
-            provider_class = self._providers[provider_id]
-            self._instances[provider_id] = provider_class()
+        if not providers_dir.exists() or not providers_dir.is_dir():
+            return
             
-        return self._instances[provider_id]
+        # Iterate over all directories in src/providers
+        for provider_path in providers_dir.iterdir():
+            if provider_path.is_dir() and not provider_path.name.startswith("_"):
+                # Try to import the 'provider.py' module inside the directory
+                provider_module = f"src.providers.{provider_path.name}.provider"
+                try:
+                    importlib.import_module(provider_module)
+                    logger.debug("dynamic_import_success", module=provider_module)
+                except ImportError as e:
+                    logger.error("dynamic_import_failed", module=provider_module, error=str(e))
 
-    def list_providers(self) -> list[str]:
-        """List all registered provider IDs."""
-        return list(self._providers.keys())
-
-# Global registry instance
 registry = ProviderRegistry()
