@@ -1,43 +1,50 @@
 import logging
+import sys
 import structlog
 from rich.logging import RichHandler
 
 def setup_logging(log_level: int = logging.INFO):
     """
-    Configure structured logging with a beautiful, tight Rich console renderer.
-    Removes the ugly padding from structlog and adds premium syntax highlighting.
+    Configure structured logging with a beautiful Rich console renderer.
     """
-    # 1. Configure standard Python logging to use RichHandler
-    # RichHandler automatically provides a beautiful Timestamp and a tightly-packed colored Level.
+    # 1. Clear existing handlers
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.setLevel(log_level)
+
+    # 2. Configure standard Python logging to use RichHandler
     rich_handler = RichHandler(
         show_time=True,
         show_level=True,
-        show_path=False,  # Keep output clean
+        show_path=False,
         rich_tracebacks=True,
         markup=True,
-        highlighter=None,  # 關閉 Rich 預設的黃色/粉色高亮
+        highlighter=None,  # Disable auto-highlighting to keep key=value clean
     )
     
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-        datefmt="%H:%M:%S",
-        handlers=[rich_handler]
-    )
+    # We use a simple message format because structlog will format the key-values
+    # into the message string, and RichHandler will just print it.
+    formatter = logging.Formatter("%(message)s")
+    rich_handler.setFormatter(formatter)
+    root_logger.addHandler(rich_handler)
 
-    # 2. Configure structlog
+    # 3. Configure structlog to output plain text to the standard logger
     structlog.configure(
         processors=[
-            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
-            # ConsoleRenderer will only render the event name and key=value pairs nicely
             structlog.dev.ConsoleRenderer(
-                colors=False,  # 必須設為 False，否則產生的原生 ANSI 碼會被 rich 當作字串印出來而破版
-                pad_event_to=0
+                colors=False,  # Let Rich handle all coloring
+                pad_event_to=0 # Disable padding, let Rich format freely
             ),
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
+
+    # Suppress overly verbose third-party loggers if needed
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)

@@ -7,7 +7,6 @@ from src.cli.archive import archive_app
 from src.cli.library import library_app
 
 # Global setup
-registry.load_all_providers()
 
 app = typer.Typer(
     help="ComicMgr - A highly extensible Comic Management Platform",
@@ -24,7 +23,11 @@ def main(verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable ver
     Global callback that runs before any command.
     Used for setting up global state like logging level.
     """
+    import logging
     setup_logging(log_level=logging.DEBUG if verbose else logging.INFO)
+    
+    # Initialize registry AFTER logging is set up
+    registry.load_all_providers()
 
 if __name__ == "__main__":
     app()
