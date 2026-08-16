@@ -4,6 +4,7 @@ import structlog
 from src.core.provider import BaseComicProvider
 from src.core.domain_models import Comic, Chapter, PageImage
 from src.core.registry import registry
+from src.core.constants import BuiltinProvider
 
 from src.providers.comicwifi.http_client import BaseHttpClient
 from src.providers.comicwifi.api import ComicApiClient
@@ -24,7 +25,7 @@ class ComicWifiProvider(BaseComicProvider):
 
     @property
     def provider_id(self) -> str:
-        return "comicwifi"
+        return BuiltinProvider.COMICWIFI
 
     @property
     def provider_name(self) -> str:

@@ -1,15 +1,16 @@
-import sys
-import structlog
-from src.manager.comic_manager import ComicManager
 from src.core.exceptions import AppBaseError
+from src.core.constants import BuiltinProvider
+from src.core.logger import setup_logging
+
+# Setup logging FIRST, before importing any modules that might log during initialization
+setup_logging()
+
+from src.manager.comic_manager import ComicManager
 
 # IMPORT PROVIDERS TO REGISTER THEM
 import src.providers.comicwifi.provider
+import structlog
 
-from src.core.logger import setup_logging
-
-# Setup structlog for clean, readable output
-setup_logging()
 logger = structlog.get_logger(__name__)
 
 def main():
@@ -26,7 +27,7 @@ def main():
         logger.info("available_providers", providers=available)
 
         # Tell the manager to use the "comicwifi" plugin
-        manager.use("comicwifi")
+        manager.use(BuiltinProvider.COMICWIFI)
 
         # 1. Fetch Detail (Now returns Standardized Core.Comic Model)
         logger.info(">>> Step 1: Fetching Comic Detail")

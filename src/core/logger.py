@@ -15,6 +15,7 @@ def setup_logging(log_level: int = logging.INFO):
         show_path=False,  # Keep output clean
         rich_tracebacks=True,
         markup=True,
+        highlighter=None,  # 關閉 Rich 預設的黃色/粉色高亮
     )
     
     logging.basicConfig(
@@ -27,15 +28,12 @@ def setup_logging(log_level: int = logging.INFO):
     # 2. Configure structlog
     structlog.configure(
         processors=[
-            # IMPORTANT: We DO NOT add `add_log_level` or `TimeStamper` here!
-            # If we add them, structlog's ConsoleRenderer will render them with ugly padding.
-            # We let RichHandler take care of the Level and Timestamp natively.
             structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             # ConsoleRenderer will only render the event name and key=value pairs nicely
             structlog.dev.ConsoleRenderer(
-                colors=False,  # Disable structlog colors, let Rich colorize the output
+                colors=False,  # 必須設為 False，否則產生的原生 ANSI 碼會被 rich 當作字串印出來而破版
                 pad_event_to=0
             ),
         ],

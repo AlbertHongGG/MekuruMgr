@@ -1,9 +1,10 @@
 import structlog
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from src.core.provider import BaseComicProvider
 from src.core.domain_models import Comic, Chapter, PageImage
 from src.core.registry import registry
+from src.core.constants import BuiltinProvider
 
 logger = structlog.get_logger(__name__)
 
@@ -12,15 +13,18 @@ class ComicManager:
     High-level business logic orchestrator for the Comic platform.
     Now entirely decoupled from specific comic sources using Dependency Injection.
     """
-    def __init__(self, default_provider_id: Optional[str] = None):
+    def __init__(self, default_provider_id: Optional[Union[str, BuiltinProvider]] = None):
         self._active_provider: Optional[BaseComicProvider] = None
         if default_provider_id:
             self.use(default_provider_id)
 
-    def use(self, provider_id: str) -> "ComicManager":
+    def use(self, provider_id: Union[str, BuiltinProvider]) -> "ComicManager":
         """Switch the active provider dynamically by its ID."""
-        self._active_provider = registry.get_provider(provider_id)
-        logger.info("manager_switched_provider", provider_id=provider_id, name=self._active_provider.provider_name)
+        # Enum values in Python are instance of the Enum class. Since BuiltinProvider inherits from str, 
+        # it can be passed directly, but we call str() to ensure the registry gets the pure string key.
+        provider_key = str(provider_id.value if isinstance(provider_id, BuiltinProvider) else provider_id)
+        self._active_provider = registry.get_provider(provider_key)
+        logger.info("manager_switched_provider", provider_id=provider_key, name=self._active_provider.provider_name)
         return self
 
     @property
