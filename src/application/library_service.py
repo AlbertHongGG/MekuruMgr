@@ -1,7 +1,7 @@
 import urllib.parse
-from typing import List, Optional
+from typing import List
 
-from src.storage.factory import StorageFactory, StorageEngine
+from src.storage.interface import IArchiveStorage
 from src.domain.models import (
     LocalComicItem, 
     LocalComicDetail, 
@@ -16,10 +16,8 @@ class LibraryService:
     Read-only service for providing clean, consumable comic data.
     Filters out incomplete chapters and transforms internal paths to CDN URLs.
     """
-    def __init__(self, base_media_url: str = "/media/"):
-        self.storage = StorageFactory.get_storage(StorageEngine.JSON)
-        # base_media_url could be a full URL "http://127.0.0.1:8000/media/" 
-        # or relative "/media/". We default to relative for flexibility.
+    def __init__(self, storage: IArchiveStorage, base_media_url: str = "/media/"):
+        self.storage = storage
         self.base_media_url = base_media_url.rstrip("/") + "/"
 
     def _build_url(self, path: str) -> str:
@@ -80,19 +78,12 @@ class LibraryService:
         if not ch or ch.status != DownloadStatus.COMPLETED:
             raise AppBaseError(f"Chapter {chapter_id} is not fully downloaded or doesn't exist.")
 
-        # Reconstruct the image paths based on storage format: provider/comic/chapter/000.ext
-        # To get the exact filenames, we look at the actual directory.
-        target_dir = self.storage.data_dir / provider_id / comic_id / chapter_id
-        if not target_dir.exists():
-            raise AppBaseError(f"Physical directory for chapter {chapter_id} not found.")
+        # Ask media storage for the relative paths
+        relative_paths = self.storage.get_chapter_images(provider_id, comic_id, chapter_id)
+        if not relative_paths:
+            raise AppBaseError(f"Physical images for chapter {chapter_id} not found.")
 
-        # Get all image files sorted alphabetically (e.g. 000.jpg, 001.jpg)
-        image_files = sorted([f.name for f in target_dir.iterdir() if f.is_file()])
-        
-        image_urls = []
-        for img in image_files:
-            relative_path = f"{provider_id}/{comic_id}/{chapter_id}/{img}"
-            image_urls.append(self._build_url(relative_path))
+        image_urls = [self._build_url(p) for p in relative_paths]
 
         return LocalChapterImages(
             provider_id=provider_id,

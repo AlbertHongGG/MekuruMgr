@@ -18,7 +18,7 @@ def get_cli_service() -> LibraryService:
     # This makes it easy for users to click the paths in their terminal.
     storage = StorageFactory.get_storage(StorageEngine.JSON)
     base_file_url = f"file:///{storage.data_dir.absolute().as_posix()}/"
-    return LibraryService(base_media_url=base_file_url)
+    return LibraryService(storage=storage, base_media_url=base_file_url)
 
 @library_app.command(name="list")
 def list_library():

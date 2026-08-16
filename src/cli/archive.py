@@ -14,7 +14,8 @@ archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete
 
 def get_archiver():
     manager = ComicManager()
-    return ArchiverEngine(manager)
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
+    return ArchiverEngine(manager, storage)
 
 @archive_app.command(name="track")
 def track_comic(
