@@ -1,14 +1,14 @@
 import json
+import logging
 import threading
 from pathlib import Path
 from typing import Dict, Optional, List
-import structlog
 from pydantic import TypeAdapter
 
 from src.domain.models import ArchivedComic
 from src.storage.interface import IStorage
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class LocalJsonStorage(IStorage):
     """
@@ -39,9 +39,9 @@ class LocalJsonStorage(IStorage):
                     
                 ta = TypeAdapter(Dict[str, ArchivedComic])
                 self._cache = ta.validate_python(data)
-                logger.info("library_db_loaded", count=len(self._cache))
+                logger.info(f"Loaded [cyan]{len(self._cache)}[/] comics from library DB")
             except Exception as e:
-                logger.error("failed_to_load_library_db", error=str(e))
+                logger.error(f"[red]Failed to load library DB: {e}[/]")
                 self._cache = {}
 
     def _save_db(self):
@@ -53,7 +53,7 @@ class LocalJsonStorage(IStorage):
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 temp_path.replace(self.db_path)
             except Exception as e:
-                logger.error("failed_to_save_library_db", error=str(e))
+                logger.error(f"[red]Failed to save library DB: {e}[/]")
                 raise
 
     def get_comic(self, provider_id: str, comic_id: str) -> Optional[ArchivedComic]:
@@ -66,15 +66,15 @@ class LocalJsonStorage(IStorage):
         with self._lock:
             self._cache[key] = comic
             self._save_db()
-            logger.info("saved_archived_comic_to_db", comic_id=comic.comic_id, title=comic.title)
+            logger.debug(f"Saved comic to DB: [green]{comic.title}[/] (ID: {comic.comic_id})")
 
     def delete_comic(self, provider_id: str, comic_id: str):
         key = f"{provider_id}::{comic_id}"
         with self._lock:
             if key in self._cache:
-                comic = self._cache.pop(key)
-                self._save_db()
-                logger.info("deleted_archived_comic_from_db", comic_id=comic_id)
+                del self._cache[key]
+            self._save_db()
+            logger.info(f"Deleted comic from DB: (Provider: [magenta]{provider_id}[/], ID: {comic_id})")
             
     def list_comics(self) -> List[ArchivedComic]:
         with self._lock:

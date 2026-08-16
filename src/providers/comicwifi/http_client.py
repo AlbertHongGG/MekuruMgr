@@ -1,5 +1,5 @@
 import httpx
-import structlog
+import logging
 from typing import Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -7,7 +7,7 @@ from src.domain.exceptions import NetworkError, ApiLogicError
 from src.providers.comicwifi.auth import ComicWifiAuth
 from src.providers.comicwifi.config import settings
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class BaseHttpClient:
     """
@@ -37,19 +37,19 @@ class BaseHttpClient:
         """
         Sends a POST request. The auth interceptor automatically injects requestTime and sign.
         """
-        logger.debug("http_post_request", endpoint=endpoint)
+        logger.debug(f"http_post_request endpoint={endpoint}")
 
         try:
             response = self.client.post(endpoint, data=data)
             response.raise_for_status()
         except httpx.HTTPError as e:
-            logger.error("http_request_failed", endpoint=endpoint, error=str(e))
+            logger.error(f"http_request_failed endpoint={endpoint} error={str(e)}")
             raise NetworkError(f"Network error on {endpoint}: {e}") from e
 
         try:
             res_json = response.json()
         except ValueError as e:
-            logger.error("invalid_json_response", endpoint=endpoint, text=response.text)
+            logger.error(f"invalid_json_response endpoint={endpoint} text={response.text}")
             raise NetworkError("Failed to parse JSON response") from e
 
         # Handle API level logic errors

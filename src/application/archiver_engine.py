@@ -3,16 +3,17 @@ import httpx
 import shutil
 import mimetypes
 from pathlib import Path
-import structlog
+import logging
 import aiofiles
 from datetime import datetime
+from rich.progress import Progress, TaskID, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
 
 from src.application.comic_manager import ComicManager
 from src.storage.factory import StorageFactory, StorageEngine
 from src.domain.models import ArchivedComic, ArchivedChapter, DownloadStatus
 from src.domain.exceptions import AppBaseError
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class ArchiverEngine:
     """
@@ -24,7 +25,7 @@ class ArchiverEngine:
         self.storage = StorageFactory.get_storage(StorageEngine.JSON)
         self.semaphore = asyncio.Semaphore(max_concurrent_downloads)
 
-    async def _download_image(self, client: httpx.AsyncClient, url: str, dest_path: Path):
+    async def _download_image(self, client: httpx.AsyncClient, url: str, dest_path: Path, progress: Progress = None, task_id: TaskID = None):
         async with self.semaphore:
             try:
                 response = await client.get(url, timeout=30.0)
@@ -39,9 +40,13 @@ class ArchiverEngine:
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 async with aiofiles.open(dest_path, 'wb') as f:
                     await f.write(response.content)
+                    
+                if progress and task_id is not None:
+                    progress.advance(task_id)
+                    
                 return dest_path.name
             except Exception as e:
-                logger.error("image_download_failed", url=url, error=str(e))
+                logger.error(f"Failed to download image [red]{url}[/]: {e}")
                 raise
 
     async def track_comic(self, provider_id: str, comic_id: str) -> ArchivedComic:
@@ -56,7 +61,7 @@ class ArchiverEngine:
         if existing:
             return existing
             
-        logger.info("archiver_tracking_comic", comic_id=comic_id)
+        logger.info(f"Tracking new comic: [green]{comic_id}[/]")
         comic_detail = self.manager.fetch_comic_detail(comic_id)
         
         comic_dir = self.storage.data_dir / provider_id / comic_id
@@ -77,7 +82,7 @@ class ArchiverEngine:
         )
         
         self.storage.save_comic(archived_comic)
-        logger.info("archiver_comic_tracked", comic_id=comic_id, title=comic_detail.title)
+        logger.info(f"Successfully tracked: [cyan]{comic_detail.title}[/]")
         return archived_comic
 
     async def sync_comic(self, provider_id: str, comic_id: str):
@@ -92,7 +97,7 @@ class ArchiverEngine:
             # Auto-track if not exist
             archived_comic = await self.track_comic(provider_id, comic_id)
             
-        logger.info("archiver_syncing_comic", comic_id=comic_id)
+        logger.info(f"Syncing comic: [cyan]{archived_comic.title}[/]")
         remote_chapters = self.manager.fetch_all_chapters(comic_id)
         comic_dir = self.storage.data_dir / provider_id / comic_id
         
@@ -104,48 +109,61 @@ class ArchiverEngine:
                 delta_chapters.append(remote_ch)
                 
         if not delta_chapters:
-            logger.info("archiver_sync_up_to_date", comic_id=comic_id)
+            logger.info(f"Sync up-to-date. No new chapters for [cyan]{archived_comic.title}[/].")
             return archived_comic
             
-        logger.info("archiver_delta_found", comic_id=comic_id, delta_count=len(delta_chapters))
+        logger.info(f"Found [yellow]{len(delta_chapters)}[/] missing/failed chapters to download.")
         
         async with httpx.AsyncClient() as client:
-            for chapter in delta_chapters:
-                logger.info("archiver_downloading_chapter", chapter_id=chapter.id, title=chapter.title)
+            with Progress(
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                TimeRemainingColumn(),
+            ) as progress:
+                sync_task = progress.add_task(f"[bold green]Total Sync Progress", total=len(delta_chapters))
                 
-                # Mark as downloading
-                archived_comic.chapters[chapter.id] = ArchivedChapter(
-                    chapter_id=chapter.id,
-                    title=chapter.title,
-                    status=DownloadStatus.DOWNLOADING
-                )
-                self.storage.save_comic(archived_comic)
+                for chapter in delta_chapters:
+                    chapter_task = progress.add_task(f"[cyan]Downloading {chapter.title}", total=1) # Will be updated when images are fetched
+                    
+                    # Mark as downloading
+                    archived_comic.chapters[chapter.id] = ArchivedChapter(
+                        chapter_id=chapter.id,
+                        title=chapter.title,
+                        status=DownloadStatus.DOWNLOADING
+                    )
+                    self.storage.save_comic(archived_comic)
+                    
+                    try:
+                        images = self.manager.fetch_chapter_images(comic_id, chapter.id)
+                        progress.update(chapter_task, total=len(images))
+                        
+                        chapter_dir = comic_dir / chapter.id
+                        chapter_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        tasks = []
+                        for index, image in enumerate(images):
+                            dest_path = chapter_dir / f"{index:03d}" 
+                            tasks.append(self._download_image(client, image.url, dest_path, progress, chapter_task))
+                        
+                        await asyncio.gather(*tasks)
+                        
+                        # Mark as completed
+                        archived_comic.chapters[chapter.id].status = DownloadStatus.COMPLETED
+                        archived_comic.chapters[chapter.id].page_count = len(images)
+                        archived_comic.chapters[chapter.id].local_path = f"{provider_id}/{comic_id}/{chapter.id}"
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to download chapter [red]{chapter.title}[/]: {e}")
+                        archived_comic.chapters[chapter.id].status = DownloadStatus.FAILED
+                    
+                    archived_comic.updated_at = datetime.now()
+                    self.storage.save_comic(archived_comic)
+                    
+                    progress.advance(sync_task)
+                    progress.remove_task(chapter_task)
                 
-                try:
-                    images = self.manager.fetch_chapter_images(comic_id, chapter.id)
-                    chapter_dir = comic_dir / chapter.id
-                    chapter_dir.mkdir(parents=True, exist_ok=True)
-                    
-                    tasks = []
-                    for index, image in enumerate(images):
-                        dest_path = chapter_dir / f"{index:03d}" 
-                        tasks.append(self._download_image(client, image.url, dest_path))
-                    
-                    await asyncio.gather(*tasks)
-                    
-                    # Mark as completed
-                    archived_comic.chapters[chapter.id].status = DownloadStatus.COMPLETED
-                    archived_comic.chapters[chapter.id].page_count = len(images)
-                    archived_comic.chapters[chapter.id].local_path = f"{provider_id}/{comic_id}/{chapter.id}"
-                    
-                except Exception as e:
-                    logger.error("archiver_chapter_failed", chapter_id=chapter.id, error=str(e))
-                    archived_comic.chapters[chapter.id].status = DownloadStatus.FAILED
-                
-                archived_comic.updated_at = datetime.now()
-                self.storage.save_comic(archived_comic)
-                
-        logger.info("archiver_sync_completed", comic_id=comic_id)
+        logger.info(f"Sync complete for [cyan]{archived_comic.title}[/]")
         return archived_comic
 
     def delete_archived_comic(self, provider_id: str, comic_id: str):
@@ -160,4 +178,4 @@ class ArchiverEngine:
         target_dir = self.storage.data_dir / provider_id / comic_id
         if target_dir.exists():
             shutil.rmtree(target_dir)
-            logger.info("archiver_deleted_files", path=str(target_dir))
+            logger.info(f"Deleted physical files at [yellow]{target_dir}[/]")

@@ -1,11 +1,11 @@
-import structlog
+import logging
 import importlib
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Type
 from src.core.provider import BaseComicProvider
 from src.domain.exceptions import AppBaseError
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class ProviderRegistry:
     """
@@ -15,11 +15,11 @@ class ProviderRegistry:
     def __init__(self):
         self._providers: Dict[str, BaseComicProvider] = {}
 
-    def register(self, provider_class: type[BaseComicProvider]):
+    def register(self, provider_class: Type[BaseComicProvider]):
         """Register a provider class with the system."""
         provider = provider_class()
         self._providers[provider.provider_id] = provider
-        logger.info("provider_registered", name=provider.provider_name, provider_id=provider.provider_id)
+        logger.info(f"Provider Registered: {provider.provider_name} (ID: {provider.provider_id})")
 
     def get_provider(self, provider_id: str) -> BaseComicProvider:
         """Retrieve an instantiated provider by its ID."""
@@ -45,11 +45,11 @@ class ProviderRegistry:
         for provider_path in providers_dir.iterdir():
             if provider_path.is_dir() and not provider_path.name.startswith("_"):
                 # Try to import the 'provider.py' module inside the directory
-                provider_module = f"src.providers.{provider_path.name}.provider"
+                module_name = f"src.providers.{provider_path.name}.provider"
                 try:
-                    importlib.import_module(provider_module)
-                    logger.debug("dynamic_import_success", module=provider_module)
-                except ImportError as e:
-                    logger.error("dynamic_import_failed", module=provider_module, error=str(e))
+                    importlib.import_module(module_name)
+                    logger.debug(f"Successfully loaded provider module: {module_name}")
+                except Exception as e:
+                    logger.error(f"Failed to load provider module {module_name}: {e}")
 
 registry = ProviderRegistry()

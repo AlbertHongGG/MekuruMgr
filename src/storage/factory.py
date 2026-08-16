@@ -1,9 +1,9 @@
 from enum import Enum
+import logging
 from src.storage.interface import IStorage
 from src.storage.local_json import LocalJsonStorage
-import structlog
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class StorageEngine(str, Enum):
     JSON = "json"
@@ -22,7 +22,7 @@ class StorageFactory:
             
         if engine == StorageEngine.JSON:
             cls._instance = LocalJsonStorage()
-            logger.info("storage_initialized", engine=engine.value)
+            logger.info(f"Storage Initialized: {engine.value}")
         else:
             raise ValueError(f"Unknown storage engine: {engine}")
             

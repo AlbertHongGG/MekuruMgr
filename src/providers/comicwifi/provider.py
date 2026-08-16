@@ -1,5 +1,5 @@
 from typing import List
-import structlog
+import logging
 
 from src.core.provider import BaseComicProvider
 from src.domain.models import Comic, Chapter, PageImage
@@ -10,7 +10,7 @@ from src.providers.comicwifi.http_client import BaseHttpClient
 from src.providers.comicwifi.api import ComicApiClient
 from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class ComicWifiProvider(BaseComicProvider):
     """
@@ -32,7 +32,7 @@ class ComicWifiProvider(BaseComicProvider):
         return "ComicWifi Official"
 
     def get_comic_detail(self, comic_id: str) -> Comic:
-        logger.info("provider_fetch_comic", provider=self.provider_id, comic_id=comic_id)
+        # Spammy log removed
         raw_detail = self._api.get_comic_detail(ComicDetailRequest(comicId=comic_id))
         
         # Mapping to Standard Domain Model
@@ -46,7 +46,7 @@ class ComicWifiProvider(BaseComicProvider):
         )
 
     def get_chapter_list(self, comic_id: str) -> List[Chapter]:
-        logger.info("provider_fetch_chapters", provider=self.provider_id, comic_id=comic_id)
+        # Spammy log removed
         raw_list = self._api.get_chapter_list(ChapterListRequest(comicId=comic_id))
         
         # Mapping
@@ -66,7 +66,7 @@ class ComicWifiProvider(BaseComicProvider):
         return chapters
 
     def get_chapter_images(self, comic_id: str, chapter_id: str) -> List[PageImage]:
-        logger.info("provider_fetch_images", provider=self.provider_id, comic_id=comic_id, chapter_id=chapter_id)
+        # Spammy log removed
         raw_images = self._api.get_chapter_images(ChapterImagesRequest(comicId=comic_id, chapterId=chapter_id))
         
         # Mapping
