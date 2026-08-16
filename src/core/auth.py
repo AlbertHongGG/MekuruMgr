@@ -1,32 +1,58 @@
 import time
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Tuple
+import hashlib
+import urllib.parse
+from typing import Generator
+import httpx
 
-class Signer(ABC):
-    """Abstract interface for signature generation."""
-    
-    @abstractmethod
-    def generate_signature(self, endpoint: str, params: Dict[str, Any]) -> Tuple[int, str]:
-        """
-        Generate requestTime and sign based on parameters.
-        Returns:
-            Tuple containing (requestTime: int, sign: str)
-        """
-        pass
+class ComicWifiAuth(httpx.Auth):
+    """
+    HTTPx Auth interceptor for Comic API.
+    Automatically injects requestTime and sign into the request body.
+    """
+    SALT = "#X2u%rXE^dk%FUpdRH8BvjmZnPDDXLhZ"
 
-class DummySigner(Signer):
-    """
-    A placeholder signer.
-    In a real scenario, this would be replaced with the actual reverse-engineered logic.
-    """
-    def generate_signature(self, endpoint: str, params: Dict[str, Any]) -> Tuple[int, str]:
-        # Return exact recorded signatures from test.json for testing
-        if "detail_page" in endpoint:
-            return 1786876141902, "d959026a57daeeecb0fc2baa202cf7fe"
-        elif "chapter_list" in endpoint:
-            return 1786876141901, "2da1da77c91c5c9b8f08a8bb75387f52"
-        elif "read" in endpoint: # assuming this is for chapter 1
-            return 1786876146137, "4487a585bce41c4c9553d54cb1fc0372"
+    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
+        # Only process POST requests with form-urlencoded body
+        if request.method == "POST" and request.headers.get("Content-Type", "").startswith("application/x-www-form-urlencoded"):
+            # Parse existing body
+            body_bytes = request.read()
+            body_str = body_bytes.decode("utf-8")
+            params = dict(urllib.parse.parse_qsl(body_str, keep_blank_values=True))
+
+            # Inject requestTime
+            request_time = str(int(time.time() * 1000))
+            params["requestTime"] = request_time
+
+            # Generate sign
+            sign = self._generate_sign(params)
+            params["sign"] = sign
+
+            # Re-encode body
+            new_body = urllib.parse.urlencode(params)
+            new_body_bytes = new_body.encode("utf-8")
             
-        request_time = int(time.time() * 1000)
-        return request_time, "dummy"
+            # Create a new headers dict and let httpx calculate Content-Length
+            new_headers = request.headers.copy()
+            if "Content-Length" in new_headers:
+                del new_headers["Content-Length"]
+            if "content-length" in new_headers:
+                del new_headers["content-length"]
+            
+            yield httpx.Request(
+                method=request.method,
+                url=request.url,
+                headers=new_headers,
+                content=new_body_bytes
+            )
+        else:
+            yield request
+
+    def _generate_sign(self, params: dict[str, str]) -> str:
+        """
+        1. Sort keys alphabetically A-Z
+        2. Concat Salt + values
+        3. Return MD5 lower hex
+        """
+        sorted_keys = sorted(params.keys())
+        concat_str = self.SALT + "".join([params[k] for k in sorted_keys])
+        return hashlib.md5(concat_str.encode("utf-8")).hexdigest()

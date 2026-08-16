@@ -1,22 +1,18 @@
 class AppBaseError(Exception):
-    """Base exception for the entire application."""
+    """Base exception for all application errors."""
     pass
 
 class NetworkError(AppBaseError):
-    """Raised when a network-level error occurs (e.g. timeout, connection error)."""
+    """Raised when HTTP request fails (connection error, timeout, 5xx)."""
     pass
 
 class ApiLogicError(AppBaseError):
-    """Raised when the API returns an error code (code != 200)."""
+    """Raised when the API returns 200 OK but the business logic code is not success."""
     def __init__(self, message: str, code: int):
         super().__init__(f"[{code}] {message}")
         self.code = code
         self.message = message
 
-class AuthError(ApiLogicError):
-    """Raised for authentication or signature errors."""
-    pass
-
-class RateLimitError(ApiLogicError):
-    """Raised when API rate limit is exceeded."""
+class SignError(AppBaseError):
+    """Raised when signature generation fails."""
     pass
