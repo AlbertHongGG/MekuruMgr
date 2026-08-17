@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from typing import List
 from src.application.comic_manager import ComicManager
 from src.application.archiver_engine import ArchiverEngine
@@ -41,11 +41,11 @@ async def track_comic(
 async def sync_comic(
     provider_id: str, 
     comic_id: str, 
-    background_tasks: BackgroundTasks,
+    request: Request,
     archiver: ArchiverEngine = Depends(get_archiver)
 ):
     """Perform an incremental sync in the background."""
-    background_tasks.add_task(archiver.sync_comic, provider_id, comic_id)
+    request.app.state.task_manager.submit(archiver.sync_comic(provider_id, comic_id))
     return {"message": f"Incremental sync started for {comic_id} on {provider_id} in the background."}
 
 @archive_router.delete("/{provider_id}/{comic_id}")

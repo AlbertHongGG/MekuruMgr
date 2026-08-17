@@ -30,4 +30,9 @@ def main(verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable ver
     registry.load_all_providers()
 
 if __name__ == "__main__":
-    app()
+    try:
+        app()
+    except KeyboardInterrupt:
+        import sys
+        print("\n[Ctrl+C] Operation cancelled by user.")
+        sys.exit(130)

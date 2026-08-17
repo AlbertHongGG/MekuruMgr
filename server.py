@@ -15,6 +15,8 @@ from src.server.library import library_router
 
 # --- Startup & Setup ---
 
+from src.core.tasks import TaskManager
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -22,13 +24,18 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
     logger.info(f"Server starting (debug={app_settings.debug})")
     
+    # Initialize Task Manager
+    app.state.task_manager = TaskManager()
+    
     # Load all provider plugins
     registry.load_all_providers()
     logger.info(f"Providers loaded: {len(registry.get_all())}")
     
     yield
     # Shutdown
-    logger.info("Server shutting down")
+    logger.info("Server shutting down, waiting for background tasks...")
+    await app.state.task_manager.shutdown()
+    logger.info("Server shutdown complete.")
 
 app = FastAPI(
     title="ComicMgr API",
