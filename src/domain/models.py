@@ -69,14 +69,13 @@ class LocalChapterItem(BaseModel):
     page_count: int
 
 class LocalComicDetail(BaseModel):
-    """Detailed comic info with completed chapters."""
+    """Detailed comic info without chapter list."""
     provider_id: str
     comic_id: str
     title: str
     tags: List[str]
     description: str
     cover_url: str
-    chapters: List[LocalChapterItem]
 
 class LocalChapterImages(BaseModel):
     """Complete image URLs for a specific chapter."""

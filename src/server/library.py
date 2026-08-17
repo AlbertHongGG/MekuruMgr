@@ -47,6 +47,17 @@ def get_library_comic_detail(provider_id: str, comic_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@library_router.get("/{provider_id}/{comic_id}/chapters", response_model=List[LocalChapterItem])
+def get_library_comic_chapters(provider_id: str, comic_id: str, request: Request):
+    """Get only the COMPLETED chapters for a comic."""
+    try:
+        service = get_service(request)
+        return service.get_comic_chapters(provider_id, comic_id)
+    except AppBaseError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @library_router.get("/{provider_id}/{comic_id}/chapters/{chapter_id}", response_model=LocalChapterImages)
 def get_library_chapter_images(provider_id: str, comic_id: str, chapter_id: str, request: Request):
     """Get the full image URLs for a fully downloaded chapter."""

@@ -44,7 +44,22 @@ class LibraryService:
         return items
 
     def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComicDetail:
-        """Get comic details including only COMPLETED chapters."""
+        """Get comic details without chapter array."""
+        c = self.storage.get_comic(provider_id, comic_id)
+        if not c:
+            raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
+
+        return LocalComicDetail(
+            provider_id=c.provider_id,
+            comic_id=c.comic_id,
+            title=c.title,
+            tags=c.tags,
+            description=c.description,
+            cover_url=self._build_url(c.cover_url)
+        )
+
+    def get_comic_chapters(self, provider_id: str, comic_id: str) -> List[LocalChapterItem]:
+        """Get only the COMPLETED chapters for a comic."""
         c = self.storage.get_comic(provider_id, comic_id)
         if not c:
             raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
@@ -57,16 +72,7 @@ class LibraryService:
                     title=ch.title,
                     page_count=ch.page_count
                 ))
-
-        return LocalComicDetail(
-            provider_id=c.provider_id,
-            comic_id=c.comic_id,
-            title=c.title,
-            tags=c.tags,
-            description=c.description,
-            cover_url=self._build_url(c.cover_url),
-            chapters=completed_chapters
-        )
+        return completed_chapters
 
     def get_chapter_images(self, provider_id: str, comic_id: str, chapter_id: str) -> LocalChapterImages:
         """Get a list of full CDN image URLs for a specific chapter."""

@@ -61,6 +61,7 @@ def show_library_comic(
     
     try:
         detail = service.get_comic_detail(provider_id, comic_id)
+        chapters = service.get_comic_chapters(provider_id, comic_id)
         
         rprint(Panel(
             f"[bold]Title:[/] {detail.title}\n"
@@ -71,12 +72,12 @@ def show_library_comic(
             border_style="green"
         ))
         
-        table = Table(title=f"Completed Chapters ({len(detail.chapters)})", border_style="cyan")
+        table = Table(title=f"Completed Chapters ({len(chapters)})", border_style="cyan")
         table.add_column("Chapter ID", style="magenta")
         table.add_column("Title", style="green")
         table.add_column("Pages", justify="right")
         
-        for ch in detail.chapters:
+        for ch in chapters:
             table.add_row(ch.chapter_id, ch.title, str(ch.page_count))
             
         rprint(table)
