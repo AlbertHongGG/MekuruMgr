@@ -1,31 +1,31 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 
 class BaseResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", coerce_numbers_to_str=True)
 
 class ComicDetail(BaseResponse):
-    id: str
-    name: str
-    cover: str
-    aspectRatio: float = 0.0
-    comicUpdateTime: str = ""
+    id: Any
+    name: Optional[str] = ""
+    cover: Optional[str] = ""
+    aspectRatio: Optional[float] = 0.0
+    comicUpdateTime: Optional[str] = ""
     tags: List[str] = Field(default_factory=list)
-    desc: str = ""
-    trace: str = ""
-    collect_status: int = 0
-    progress_id: int = 0
-    chapter_subscribe_status: int = 0
-    eighteen_pop_status: int = 0
+    desc: Optional[str] = ""
+    trace: Optional[str] = ""
+    collect_status: Optional[int] = 0
+    progress_id: Optional[int] = 0
+    chapter_subscribe_status: Optional[int] = 0
+    eighteen_pop_status: Optional[int] = 0
 
 class ChapterInfo(BaseResponse):
-    chapter_id: int
-    chapter_name: str
-    chapter_cover: str = ""
-    create_time: str = ""
-    is_checked: int = 0
-    is_new_chapter: int = 0
-    showVipIcon: bool = False
+    chapter_id: Any
+    chapter_name: Optional[str] = ""
+    chapter_cover: Optional[str] = ""
+    create_time: Optional[str] = ""
+    is_checked: Optional[int] = 0
+    is_new_chapter: Optional[int] = 0
+    showVipIcon: Optional[bool] = False
 
 class ChapterList(BaseResponse):
     chapters: List[ChapterInfo] = Field(default_factory=list)

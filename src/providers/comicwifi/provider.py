@@ -32,36 +32,31 @@ class ComicWifiProvider(BaseComicProvider):
         return "ComicWifi Official"
 
     def get_comic_detail(self, comic_id: str) -> Comic:
-        # Spammy log removed
         raw_detail = self._api.get_comic_detail(ComicDetailRequest(comicId=comic_id))
         
         # Mapping to Standard Domain Model
         return Comic(
-            id=raw_detail.id,
-            title=raw_detail.name,
-            cover_url=raw_detail.cover,
-            description=raw_detail.desc,
-            tags=raw_detail.tags,
-            update_status=raw_detail.trace
+            id=str(raw_detail.id),
+            title=raw_detail.name or "Unknown Title",
+            cover_url=raw_detail.cover or "",
+            description=raw_detail.desc or "",
+            tags=raw_detail.tags or [],
+            update_status=raw_detail.trace or ""
         )
 
     def get_chapter_list(self, comic_id: str) -> List[Chapter]:
-        # Spammy log removed
         raw_list = self._api.get_chapter_list(ChapterListRequest(comicId=comic_id))
         
         # Mapping
         chapters = []
         for idx, ch in enumerate(raw_list.chapters):
-            # The API returns chapters in some order, but might not have explicit floats.
-            # We use enumerate as a fallback order or try to extract from name if needed.
-            # Here we just use the index as order for simplicity, assuming they are ordered.
             chapters.append(Chapter(
                 id=str(ch.chapter_id),
-                title=ch.chapter_name,
+                title=ch.chapter_name or f"Chapter {idx+1}",
                 order=float(idx),
-                cover_url=ch.chapter_cover,
-                is_vip=ch.showVipIcon,
-                publish_time=ch.create_time
+                cover_url=ch.chapter_cover or "",
+                is_vip=bool(ch.showVipIcon),
+                publish_time=ch.create_time or ""
             ))
         return chapters
 
