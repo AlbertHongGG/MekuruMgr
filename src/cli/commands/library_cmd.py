@@ -10,7 +10,8 @@ from rich import print as rprint
 library_app = typer.Typer(help="Read and access locally downloaded comics")
 
 def get_cli_service() -> LibraryService:
-    storage = StorageFactory.get_storage(StorageEngine.JSON)
+    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    storage = provider.get_archive_storage()
     base_file_url = f"file:///{storage.data_dir.absolute().as_posix()}/"
     return LibraryService(storage=storage, base_media_url=base_file_url)
 

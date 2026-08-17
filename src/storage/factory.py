@@ -1,7 +1,7 @@
 from enum import Enum
 import logging
-from src.storage.interface import IArchiveStorage
-from src.storage.local_storage import LocalJsonStorage
+from src.storage.core.provider import IStorageProvider
+from src.storage.engines.json.provider import JsonStorageProvider
 
 logger = logging.getLogger(__name__)
 
@@ -9,14 +9,14 @@ class StorageEngine(str, Enum):
     JSON = "json"
 
 class StorageFactory:
-    _instances = {}
+    _providers = {}
 
     @classmethod
-    def get_storage(cls, engine: StorageEngine = StorageEngine.JSON) -> IArchiveStorage:
-        if engine not in cls._instances:
+    def get_provider(cls, engine: StorageEngine = StorageEngine.JSON) -> IStorageProvider:
+        if engine not in cls._providers:
             if engine == StorageEngine.JSON:
-                cls._instances[engine] = LocalJsonStorage()
-                logger.info(f"Archive Storage Initialized: {engine.value}")
+                cls._providers[engine] = JsonStorageProvider()
+                logger.info(f"Storage Provider Initialized: {engine.value}")
             else:
                 raise ValueError(f"Unknown storage engine: {engine}")
-        return cls._instances[engine]
+        return cls._providers[engine]

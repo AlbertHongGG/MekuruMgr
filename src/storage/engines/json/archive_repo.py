@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Dict, Optional, List, Any
 from pydantic import TypeAdapter
 
-from src.domain.models import ArchivedComic
-from src.storage.interface import IArchiveStorage
+from src.domain.models import ArchivedComic, DownloadStatus, ArchivedChapter
+from src.storage.core.archive_interface import IArchiveStorage
 
 logger = logging.getLogger(__name__)
 

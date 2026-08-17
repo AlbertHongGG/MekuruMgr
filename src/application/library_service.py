@@ -1,7 +1,7 @@
 import urllib.parse
 from typing import List
 
-from src.storage.interface import IArchiveStorage
+from src.storage.core.archive_interface import IArchiveStorage
 from src.domain.models import (
     LocalComicItem, 
     LocalComicDetail, 

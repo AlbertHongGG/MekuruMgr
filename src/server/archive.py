@@ -12,20 +12,20 @@ archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 @lru_cache()
 def get_archiver():
     manager = ComicManager()
-    storage = StorageFactory.get_storage(StorageEngine.JSON)
-    return ArchiverEngine(manager, storage)
+    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    return ArchiverEngine(manager, provider.get_archive_storage())
 
 @archive_router.get("/", response_model=List[ArchivedComic])
 def list_archived_comics():
     """List all locally archived comics."""
-    storage = StorageFactory.get_storage(StorageEngine.JSON)
-    return storage.list_comics()
+    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    return provider.get_archive_storage().list_comics()
 
 @archive_router.get("/{provider_id}/{comic_id}", response_model=ArchivedComic)
 def get_archived_comic(provider_id: str, comic_id: str):
     """Get metadata for a specific archived comic."""
-    storage = StorageFactory.get_storage(StorageEngine.JSON)
-    comic = storage.get_comic(provider_id, comic_id)
+    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    comic = provider.get_archive_storage().get_comic(provider_id, comic_id)
     if not comic:
         raise HTTPException(status_code=404, detail="Archived comic not found")
     return comic

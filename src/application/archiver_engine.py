@@ -6,7 +6,7 @@ from typing import Optional
 
 from src.application.comic_manager import ComicManager
 from src.application.interfaces import IProgressObserver
-from src.storage.interface import IArchiveStorage
+from src.storage.core.archive_interface import IArchiveStorage
 from src.domain.models import ArchivedComic, ArchivedChapter, DownloadStatus
 from src.domain.exceptions import AppBaseError
 
