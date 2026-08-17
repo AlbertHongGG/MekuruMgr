@@ -58,7 +58,7 @@ def search_library(keyword: str = typer.Argument(..., help="Keyword to search in
         rprint(f"[yellow]No comics found matching '{keyword}' in the local library.[/yellow]")
         return
         
-    table = Table(title=f"Local Search Results: '{keyword}'", border_style="blue")
+    table = Table(title=f"Local Search Results: '{keyword}'", border_style="white")
     table.add_column("Provider", style="cyan")
     table.add_column("Comic ID", style="magenta")
     table.add_column("Title", style="green", no_wrap=False)
