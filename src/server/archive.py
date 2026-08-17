@@ -21,25 +21,6 @@ def list_archived_comics():
     provider = StorageFactory.get_provider(StorageEngine.JSON)
     return provider.get_archive_storage().list_comics()
 
-@archive_router.get("/{provider_id}/{comic_id}", response_model=ArchivedComic)
-def get_archived_comic(provider_id: str, comic_id: str):
-    """Get metadata for a specific archived comic."""
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
-    comic = provider.get_archive_storage().get_comic(provider_id, comic_id)
-    if not comic:
-        raise HTTPException(status_code=404, detail="Archived comic not found")
-    return comic
-
-@archive_router.post("/{provider_id}/{comic_id}/track")
-async def track_comic(
-    provider_id: str, 
-    comic_id: str, 
-    archiver: ArchiverEngine = Depends(get_archiver)
-):
-    """Add a comic to the tracking library without downloading chapters."""
-    archived = await archiver.track_comic(provider_id, comic_id)
-    return {"message": f"Successfully tracked comic {comic_id}", "data": archived}
-
 @archive_router.get("/sync/active")
 async def get_active_sync_tasks(request: Request):
     """Get a list of all currently active sync tasks."""
@@ -58,6 +39,25 @@ async def get_active_sync_tasks(request: Request):
                 })
     
     return {"active_tasks": result, "total": len(result)}
+
+@archive_router.get("/{provider_id}/{comic_id}", response_model=ArchivedComic)
+def get_archived_comic(provider_id: str, comic_id: str):
+    """Get metadata for a specific archived comic."""
+    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    comic = provider.get_archive_storage().get_comic(provider_id, comic_id)
+    if not comic:
+        raise HTTPException(status_code=404, detail="Archived comic not found")
+    return comic
+
+@archive_router.post("/{provider_id}/{comic_id}/track")
+async def track_comic(
+    provider_id: str, 
+    comic_id: str, 
+    archiver: ArchiverEngine = Depends(get_archiver)
+):
+    """Add a comic to the tracking library without downloading chapters."""
+    archived = await archiver.track_comic(provider_id, comic_id)
+    return {"message": f"Successfully tracked comic {comic_id}", "data": archived}
 
 @archive_router.post("/{provider_id}/{comic_id}/sync")
 async def sync_comic(
