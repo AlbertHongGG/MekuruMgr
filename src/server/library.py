@@ -27,6 +27,15 @@ def get_archived_media(path: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@library_router.get("/search", response_model=List[LocalComicItem])
+def search_library_comics(keyword: str, request: Request):
+    """Search locally available comics by keyword."""
+    try:
+        service = get_service(request)
+        return service.search_comics(keyword)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @library_router.get("/", response_model=List[LocalComicItem])
 def list_library_comics(request: Request):
     """List all locally available comics (Read-Only)."""

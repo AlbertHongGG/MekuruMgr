@@ -48,6 +48,32 @@ def list_library():
         
     rprint(table)
 
+@library_app.command(name="search")
+def search_library(keyword: str = typer.Argument(..., help="Keyword to search in library")):
+    """Search for comics in the local library."""
+    service = get_cli_service()
+    comics = service.search_comics(keyword)
+    
+    if not comics:
+        rprint(f"[yellow]No comics found matching '{keyword}' in the local library.[/yellow]")
+        return
+        
+    table = Table(title=f"Local Search Results: '{keyword}'", border_style="blue")
+    table.add_column("Provider", style="cyan")
+    table.add_column("Comic ID", style="magenta")
+    table.add_column("Title", style="green", no_wrap=False)
+    table.add_column("Completed Chapters", justify="right")
+    
+    for c in comics:
+        table.add_row(
+            c.provider_id,
+            c.comic_id,
+            c.title,
+            str(c.completed_chapters_count)
+        )
+        
+    rprint(table)
+
 @library_app.command(name="show")
 def show_library_comic(
     comic_id: str = typer.Argument(..., help="The ID of the comic to show"),

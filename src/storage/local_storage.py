@@ -85,6 +85,19 @@ class LocalJsonStorage(IArchiveStorage):
         with self._lock:
             return list(self._cache.values())
 
+    def search_comics(self, keyword: str) -> List[ArchivedComic]:
+        keyword = keyword.lower()
+        results = []
+        with self._lock:
+            for comic in self._cache.values():
+                if (keyword in comic.title.lower() or 
+                    keyword in comic.description.lower() or 
+                    keyword in comic.comic_id.lower() or
+                    keyword in comic.provider_id.lower() or
+                    any(keyword in tag.lower() for tag in comic.tags)):
+                    results.append(comic)
+        return results
+
     # --- IArchiveStorage: Media ---
     async def save_image(self, provider_id: str, comic_id: str, chapter_id: str, index: int, content: bytes, content_type: str) -> str:
         comic_dir = self.data_dir / provider_id / comic_id

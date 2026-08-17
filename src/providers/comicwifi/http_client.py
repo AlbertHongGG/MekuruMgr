@@ -47,6 +47,9 @@ class BaseHttpClient:
             raise NetworkError(f"Network error on {endpoint}: {e}") from e
 
         try:
+            # Force UTF-8 decoding to prevent httpx from guessing wrong encodings
+            # when the server doesn't provide a charset header.
+            response.encoding = 'utf-8'
             res_json = response.json()
         except ValueError as e:
             logger.error(f"invalid_json_response endpoint={endpoint} text={response.text}")

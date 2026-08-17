@@ -30,6 +30,11 @@ class IArchiveStorage(ABC):
         """List all tracked comics."""
         pass
 
+    @abstractmethod
+    def search_comics(self, keyword: str) -> List[ArchivedComic]:
+        """Search tracked comics by keyword (title, tags, description)."""
+        pass
+
     # --- Media Operations ---
     @abstractmethod
     async def save_image(self, provider_id: str, comic_id: str, chapter_id: str, index: int, content: bytes, content_type: str) -> str:

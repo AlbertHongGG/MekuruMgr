@@ -43,6 +43,24 @@ class LibraryService:
             ))
         return items
 
+    def search_comics(self, keyword: str) -> List[LocalComicItem]:
+        """Search local library by keyword."""
+        if not keyword or not keyword.strip():
+            return []
+            
+        archived_comics = self.storage.search_comics(keyword.strip())
+        items = []
+        for c in archived_comics:
+            completed_count = sum(1 for ch in c.chapters.values() if ch.status == DownloadStatus.COMPLETED)
+            items.append(LocalComicItem(
+                provider_id=c.provider_id,
+                comic_id=c.comic_id,
+                title=c.title,
+                cover_url=self._build_url(c.cover_url),
+                completed_chapters_count=completed_count
+            ))
+        return items
+
     def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComicDetail:
         """Get comic details without chapter array."""
         c = self.storage.get_comic(provider_id, comic_id)
