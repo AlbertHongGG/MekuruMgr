@@ -52,6 +52,23 @@ class ArchivedComic(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
+class ChapterSyncProgress(BaseModel):
+    chapter_id: str
+    title: str
+    total_pages: int
+    downloaded_pages: int
+    status: DownloadStatus
+
+class ComicSyncProgress(BaseModel):
+    provider_id: str
+    comic_id: str
+    total_chapters: int
+    completed_chapters: int
+    failed_chapters: int
+    pending_chapters: int
+    downloading_chapters: int
+    active_chapters: List[ChapterSyncProgress] = Field(default_factory=list)
+
 # --- Library (Read-Only) Models ---
 
 class LocalComicItem(BaseModel):

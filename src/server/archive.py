@@ -59,3 +59,15 @@ def delete_archived_comic(
         return {"message": f"Comic {comic_id} deleted successfully."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@archive_router.get("/{provider_id}/{comic_id}/progress")
+def get_sync_progress(
+    provider_id: str, 
+    comic_id: str,
+    archiver: ArchiverEngine = Depends(get_archiver)
+):
+    """Get real-time detailed sync progress for a comic."""
+    try:
+        return archiver.get_sync_progress(provider_id, comic_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

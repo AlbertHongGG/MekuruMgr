@@ -125,6 +125,8 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 
 ### Archival Management API (Writing)
 *   `GET /api/v1/archive/` : View tracking health status.
+*   `GET /api/v1/archive/{provider_id}/{comic_id}` : Get metadata for a specific archived comic.
+*   `GET /api/v1/archive/{provider_id}/{comic_id}/progress` : Get real-time detailed sync progress (active chapters and pages downloaded).
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/track` : Track without downloading.
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger background incremental sync.
 
