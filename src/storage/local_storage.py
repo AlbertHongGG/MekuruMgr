@@ -5,7 +5,7 @@ import aiofiles
 import mimetypes
 import shutil
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from pydantic import TypeAdapter
 
 from src.domain.models import ArchivedComic
@@ -144,3 +144,20 @@ class LocalJsonStorage(IArchiveStorage):
     def is_chapter_missing(self, provider_id: str, comic_id: str, chapter_id: str) -> bool:
         chapter_dir = self.data_dir / provider_id / comic_id / chapter_id
         return not chapter_dir.exists()
+
+    def get_image_stream(self, relative_path: str) -> tuple[Any, str]:
+        file_path = self.data_dir / relative_path
+        if not file_path.exists() or not file_path.is_file():
+            from src.domain.exceptions import AppBaseError
+            raise AppBaseError(f"Image not found: {relative_path}")
+        
+        ctype, _ = mimetypes.guess_type(str(file_path))
+        if not ctype:
+            ctype = "application/octet-stream"
+            
+        def file_iterator():
+            with open(file_path, "rb") as f:
+                while chunk := f.read(8192):
+                    yield chunk
+                    
+        return file_iterator(), ctype

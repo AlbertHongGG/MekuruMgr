@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from src.core.logger import setup_logging
 from src.core.registry import registry
@@ -45,11 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- Static File Serving (CDN) ---
-
-storage = StorageFactory.get_storage(StorageEngine.JSON)
-app.mount("/media", StaticFiles(directory=storage.data_dir), name="media")
 
 # --- Routers ---
 

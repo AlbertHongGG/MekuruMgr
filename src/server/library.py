@@ -1,17 +1,31 @@
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from typing import List
 
 from src.application.library_service import LibraryService
 from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages
 from src.domain.exceptions import AppBaseError
+from src.storage.factory import StorageFactory, StorageEngine
 
 library_router = APIRouter(prefix="/api/v1/library", tags=["Library"])
 
 def get_service(request: Request) -> LibraryService:
-    # Use FastAPI's Request to get the exact base URL of the server
-    # This allows absolute URLs (e.g. http://127.0.0.1:8000/media/)
-    base_media_url = str(request.base_url) + "media/"
-    return LibraryService(base_media_url=base_media_url)
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
+    # The new absolute API URL for the media proxy
+    base_media_url = str(request.base_url) + "api/v1/library/media/"
+    return LibraryService(storage=storage, base_media_url=base_media_url)
+
+@library_router.get("/media/{path:path}")
+def get_archived_media(path: str):
+    """Serve an archived media file using the storage engine."""
+    try:
+        storage = StorageFactory.get_storage(StorageEngine.JSON)
+        stream_gen, content_type = storage.get_image_stream(path)
+        return StreamingResponse(stream_gen, media_type=content_type)
+    except AppBaseError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/", response_model=List[LocalComicItem])
 def list_library_comics(request: Request):

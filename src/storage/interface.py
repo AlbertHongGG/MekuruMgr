@@ -52,6 +52,14 @@ class IArchiveStorage(ABC):
         Counts physical/valid files in the chapter storage to verify completion.
         """
         pass
+
+    @abstractmethod
+    def get_image_stream(self, relative_path: str) -> tuple[Any, str]:
+        """
+        Get a byte stream and MIME type for an archived image.
+        Returns: (iterator_of_bytes, content_type)
+        """
+        pass
         
     @abstractmethod
     def check_image_exists(self, provider_id: str, comic_id: str, chapter_id: str, index: int) -> bool:
