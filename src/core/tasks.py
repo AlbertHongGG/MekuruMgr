@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Coroutine, Set, Any
+from typing import Coroutine, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +10,10 @@ class TaskManager:
     and ensures graceful shutdown upon server termination.
     """
     def __init__(self):
-        self._active_tasks: Set[asyncio.Task[Any]] = set()
+        # Maps task_id -> asyncio.Task
+        self._active_tasks: Dict[str, asyncio.Task[Any]] = {}
 
-    async def _task_wrapper(self, coro: Coroutine[Any, Any, Any]) -> None:
+    async def _task_wrapper(self, task_id: str, coro: Coroutine[Any, Any, Any]) -> None:
         """
         Wraps a coroutine to catch and swallow asyncio.CancelledError,
         preventing nasty traceback leaks on server shutdown.
@@ -20,20 +21,32 @@ class TaskManager:
         try:
             await coro
         except asyncio.CancelledError:
-            logger.info("Background task gracefully cancelled (system shutdown/interrupt).")
-            # Swallow the exception so the event loop doesn't print a traceback
+            logger.info(f"Task '{task_id}' gracefully cancelled (system shutdown/interrupt).")
         except Exception as e:
-            logger.error(f"Background task failed with error: {e}", exc_info=True)
+            logger.error(f"Task '{task_id}' failed with error: {e}", exc_info=True)
+        finally:
+            # Safely remove from active tasks dictionary when completed or errored
+            self._active_tasks.pop(task_id, None)
 
-    def submit(self, coro: Coroutine[Any, Any, Any]) -> None:
+    def submit(self, task_id: str, coro: Coroutine[Any, Any, Any]) -> bool:
         """
         Submit a coroutine to be executed in the background.
+        Returns True if task was submitted, False if task_id already exists (ignored).
         """
-        # Create the task through the wrapper
-        task = asyncio.create_task(self._task_wrapper(coro))
-        self._active_tasks.add(task)
-        # Remove task from active set when done to prevent memory leaks
-        task.add_done_callback(self._active_tasks.discard)
+        if task_id in self._active_tasks:
+            logger.info(f"Task '{task_id}' is already running. Ignoring duplicate submission.")
+            return False
+            
+        task = asyncio.create_task(self._task_wrapper(task_id, coro))
+        self._active_tasks[task_id] = task
+        logger.info(f"Task '{task_id}' submitted successfully.")
+        return True
+
+    def get_active_tasks(self) -> List[str]:
+        """
+        Return a list of active task_ids.
+        """
+        return list(self._active_tasks.keys())
 
     async def shutdown(self) -> None:
         """
@@ -45,11 +58,12 @@ class TaskManager:
         logger.info(f"Shutting down TaskManager. Cancelling {len(self._active_tasks)} active tasks...")
         
         # Issue cancel to all tasks
-        for task in self._active_tasks:
+        tasks_to_wait = list(self._active_tasks.values())
+        for task in tasks_to_wait:
             task.cancel()
             
         # Wait for all tasks to acknowledge cancellation and exit
-        if self._active_tasks:
-            await asyncio.gather(*self._active_tasks, return_exceptions=True)
+        if tasks_to_wait:
+            await asyncio.gather(*tasks_to_wait, return_exceptions=True)
             
         logger.info("All background tasks have been cleanly terminated.")
