@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from src.application.user_service import UserService
 from src.application.library_service import LibraryService
 from src.storage.factory import StorageFactory, StorageEngine
-from src.domain.user_models import UserComicInteraction, UserLibraryItem
+from src.domain.user_models import UserComicInteraction
 
 user_router = APIRouter(prefix="/api/v1/user", tags=["User Profile"])
 
@@ -19,10 +19,10 @@ class ReadProgressRequest(BaseModel):
     chapter_id: str
     page_index: int
 
-@user_router.get("/favorites", response_model=List[UserLibraryItem])
+@user_router.get("/favorites", response_model=List[UserComicInteraction])
 def get_user_favorites(service: UserService = Depends(get_user_service)):
-    """Get a composed list of all favorite comics."""
-    return service.get_composed_favorites()
+    """Get all favorite interactions directly."""
+    return service.get_all_favorites()
 
 @user_router.get("/interactions/{provider_id}/{comic_id}", response_model=UserComicInteraction)
 def get_interaction(provider_id: str, comic_id: str, service: UserService = Depends(get_user_service)):

@@ -19,13 +19,4 @@ class UserProfile(BaseModel):
     # Key format: "{provider_id}::{comic_id}"
     interactions: Dict[str, UserComicInteraction] = Field(default_factory=dict)
 
-# --- Read Models (Projection) ---
-class UserLibraryItem(BaseModel):
-    """Composed read-model containing both User State and Archive Metadata"""
-    provider_id: str
-    comic_id: str
-    title: str
-    cover_url: str
-    completed_chapters_count: int
-    is_favorite: bool
-    last_read_chapter_id: Optional[str] = None
+

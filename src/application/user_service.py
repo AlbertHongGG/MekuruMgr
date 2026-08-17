@@ -4,7 +4,7 @@ from datetime import datetime
 
 from src.storage.core.user_interface import IUserStorage
 from src.application.library_service import LibraryService
-from src.domain.user_models import UserComicInteraction, ReadingProgress, UserLibraryItem
+from src.domain.user_models import UserComicInteraction, ReadingProgress
 from src.domain.exceptions import AppBaseError
 
 logger = logging.getLogger(__name__)
@@ -45,27 +45,6 @@ class UserService:
         self.storage.save_interaction(interaction)
         logger.debug(f"Updated reading progress for {comic_id} / {chapter_id} to page {page_index}")
 
-    def get_composed_favorites(self) -> List[UserLibraryItem]:
-        """Get all favorites, combined with library metadata."""
-        favorites = [i for i in self.storage.get_all_interactions() if i.is_favorite]
-        
-        result = []
-        for fav in favorites:
-            try:
-                # Use library_service to get comic details
-                detail = self.library_service.get_comic_detail(fav.provider_id, fav.comic_id)
-                item = UserLibraryItem(
-                    provider_id=fav.provider_id,
-                    comic_id=fav.comic_id,
-                    title=detail.title,
-                    cover_url=detail.cover_url,
-                    completed_chapters_count=len(self.library_service.get_comic_chapters(fav.provider_id, fav.comic_id)),
-                    is_favorite=True,
-                    last_read_chapter_id=fav.last_read_chapter_id
-                )
-                result.append(item)
-            except AppBaseError:
-                # Comic might be marked as favorite but deleted from local library
-                pass
-                
-        return result
+    def get_all_favorites(self) -> List[UserComicInteraction]:
+        """Get all favorite interactions directly without any metadata composition."""
+        return [i for i in self.storage.get_all_interactions() if i.is_favorite]
