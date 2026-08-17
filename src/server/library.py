@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from typing import List
 
 from src.application.library_service import LibraryService
-from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages
+from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem
 from src.domain.exceptions import AppBaseError
 from src.storage.factory import StorageFactory, StorageEngine
 

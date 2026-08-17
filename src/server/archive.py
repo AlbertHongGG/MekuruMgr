@@ -9,7 +9,8 @@ archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
 def get_archiver():
     manager = ComicManager()
-    return ArchiverEngine(manager)
+    storage = StorageFactory.get_storage(StorageEngine.JSON)
+    return ArchiverEngine(manager, storage)
 
 @archive_router.get("/", response_model=List[ArchivedComic])
 def list_archived_comics():
