@@ -2,9 +2,9 @@ import typer
 import logging
 from src.core.logger import setup_logging
 from src.core.registry import registry
-from src.cli.comic import comic_app
-from src.cli.archive import archive_app
-from src.cli.library import library_app
+from src.cli.commands.comic_cmd import comic_app
+from src.cli.commands.archive_cmd import archive_app
+from src.cli.commands.library_cmd import library_app
 
 # Global setup
 
