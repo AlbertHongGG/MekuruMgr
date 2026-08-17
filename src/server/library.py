@@ -36,9 +36,11 @@ def search_library_comics(keyword: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@library_router.get("/", response_model=List[LocalComicItem])
-def list_library_comics(request: Request):
-    """List all locally available comics (Read-Only)."""
+
+
+@library_router.get("/explore", response_model=List[LocalComicItem])
+def explore_library_comics(request: Request):
+    """Explore all locally available comics (Alias for list)."""
     try:
         service = get_service(request)
         return service.list_comics()

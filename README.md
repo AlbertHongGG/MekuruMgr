@@ -89,13 +89,13 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 
 ### Library Access (library)
 
+*   Explore Local Library (Clean view of readable comics):
+    ```bash
+    uv run python cli.py library explore
+    ```
 *   Search Local Library:
     ```bash
     uv run python cli.py library search "keyword"
-    ```
-*   List Available Comics (Clean view of readable comics):
-    ```bash
-    uv run python cli.py library list
     ```
 *   Show Comic Details (Lists only fully completed chapters):
     ```bash
@@ -129,9 +129,10 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger background incremental sync.
 
 ### Library Serving API (Reading)
+*   `GET /api/v1/library/explore` : Explore all locally available comics.
 *   `GET /api/v1/library/search?keyword=...` : Search for downloaded comics.
-*   `GET /api/v1/library/` : Get a clean list of all readable comics.
 *   `GET /api/v1/library/{provider_id}/{comic_id}` : Get comic details and its COMPLETED chapters.
+*   `GET /api/v1/library/{provider_id}/{comic_id}/chapters` : Get only the COMPLETED chapters for a comic.
 *   `GET /api/v1/library/{provider_id}/{comic_id}/chapters/{chapter_id}` : Get a list of absolute media proxy URLs for all images in the chapter.
 
 ### Media Streaming Proxy (Image Serving)

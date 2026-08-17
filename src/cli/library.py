@@ -20,9 +20,9 @@ def get_cli_service() -> LibraryService:
     base_file_url = f"file:///{storage.data_dir.absolute().as_posix()}/"
     return LibraryService(storage=storage, base_media_url=base_file_url)
 
-@library_app.command(name="list")
-def list_library():
-    """List all available comics in the local library."""
+@library_app.command(name="explore")
+def explore_library():
+    """Explore all available comics in the local library."""
     service = get_cli_service()
     comics = service.list_comics()
     
