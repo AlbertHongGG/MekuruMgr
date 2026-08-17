@@ -1,4 +1,4 @@
-import structlog
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -19,16 +19,16 @@ from src.server.library import library_router
 async def lifespan(app: FastAPI):
     # Startup
     setup_logging(log_level=logging.DEBUG if app_settings.debug else logging.INFO)
-    logger = structlog.get_logger(__name__)
-    logger.info("server_starting", debug=app_settings.debug)
+    logger = logging.getLogger(__name__)
+    logger.info(f"Server starting (debug={app_settings.debug})")
     
     # Load all provider plugins
     registry.load_all_providers()
-    logger.info("providers_loaded", count=len(registry.list_providers()))
+    logger.info(f"Providers loaded: {len(registry.get_all())}")
     
     yield
     # Shutdown
-    logger.info("server_shutting_down")
+    logger.info("Server shutting down")
 
 app = FastAPI(
     title="ComicMgr API",

@@ -5,11 +5,14 @@ It provides a robust dynamic Provider plugin system, an Incremental Sync engine 
 
 ## Core Features
 
-*   Provider Architecture: Easily extendable to support new comic sources (default support for `comicwifi`).
-*   Incremental Sync Engine: Downloads only missing or failed chapters to preserve bandwidth and avoid bans.
-*   State Machine Lifecycle: Tracks chapter states (PENDING, DOWNLOADING, COMPLETED, FAILED) ensuring robust resume capabilities on network failure.
-*   Bounded Contexts: Strictly separated `archive` (Management/Writing) and `library` (Serving/Reading) domains.
-*   FastAPI Delivery: Built-in endpoints to serve comics via API and static file CDN mounts.
+*   **Provider Architecture**: Easily extendable to support new comic sources (default support for `comicwifi`).
+*   **Storage Abstraction (`IArchiveStorage`)**: Completely decouples storage mechanisms. Switch between Local File System, Database, or AWS S3 without changing any core logic or API code.
+*   **Atomic Downloads**: Uses `.tmp` files during downloading and renaming to guarantee absolutely zero corrupted images upon network interruption.
+*   **Memory-Safe Media Proxy**: Serves all images using async byte streaming chunking (8KB), guaranteeing OOM (Out Of Memory) immunity even under extreme concurrency.
+*   **Incremental Sync Engine**: Downloads only missing or failed chapters to preserve bandwidth and avoid bans.
+*   **State Machine Lifecycle**: Tracks chapter states (PENDING, DOWNLOADING, COMPLETED, FAILED) ensuring robust resume capabilities on network failure.
+*   **Bounded Contexts**: Strictly separated `archive` (Management/Writing) and `library` (Serving/Reading) domains.
+*   **Pydantic V2 Validation**: Uses the latest `TypeAdapter` for strict, safe, and robust JSON array validations from external sources.
 
 ---
 
@@ -42,6 +45,10 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 
 ### Remote Fetching (comic)
 
+*   Search Comics:
+    ```bash
+    uv run python cli.py comic search "keyword"
+    ```
 *   Fetch Comic Metadata:
     ```bash
     uv run python cli.py comic fetch <comic_id>
@@ -49,6 +56,10 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 *   List All Remote Chapters:
     ```bash
     uv run python cli.py comic list-chapters <comic_id>
+    ```
+*   List All Remote Chapter Images:
+    ```bash
+    uv run python cli.py comic list-images <comic_id> <chapter_id>
     ```
 
 ### Archival Management (archive)
@@ -89,15 +100,17 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 
 ## Server API
 
-Start the FastAPI server to serve both the API and the Static Image CDN:
+Start the FastAPI server to serve the API:
 
 ```bash
 uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### Remote Search API
+### Remote API (Proxy)
+*   `GET /api/v1/comics/{provider_id}/search?keyword=...`
 *   `GET /api/v1/comics/{provider_id}/{comic_id}`
 *   `GET /api/v1/comics/{provider_id}/{comic_id}/chapters`
+*   `GET /api/v1/comics/{provider_id}/{comic_id}/chapters/{chapter_id}/images`
 
 ### Archival Management API (Writing)
 *   `GET /api/v1/archive/` : View tracking health status.
@@ -107,14 +120,12 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 ### Library Serving API (Reading)
 *   `GET /api/v1/library/` : Get a clean list of all readable comics.
 *   `GET /api/v1/library/{provider_id}/{comic_id}` : Get comic details and its COMPLETED chapters.
-*   `GET /api/v1/library/{provider_id}/{comic_id}/chapters/{chapter_id}` : Get a list of absolute CDN URLs for all images in the chapter.
+*   `GET /api/v1/library/{provider_id}/{comic_id}/chapters/{chapter_id}` : Get a list of absolute media proxy URLs for all images in the chapter.
 
-### Static Image CDN
+### Media Streaming Proxy (Image Serving)
 
-Once a comic is archived, its images are served statically via the `/media/` mount:
+Once a comic is archived, its images are securely and efficiently streamed (using 8KB chunking) via the media proxy endpoint, ensuring no hard-coupling to the physical filesystem:
 ```text
-GET /media/{provider_id}/{comic_id}/cover.jpg
-GET /media/{provider_id}/{comic_id}/{chapter_id}/000.jpg
+GET /api/v1/library/media/{provider_id}/{comic_id}/cover.jpg
+GET /api/v1/library/media/{provider_id}/{comic_id}/{chapter_id}/000.jpg
 ```
-
-

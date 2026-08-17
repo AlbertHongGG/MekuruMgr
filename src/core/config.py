@@ -17,5 +17,8 @@ class AppConfig(BaseSettings):
     # Server settings
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000)
+    
+    # Environment
+    debug: bool = Field(default=False)
 
 app_settings = AppConfig()
