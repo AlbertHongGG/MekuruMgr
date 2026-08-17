@@ -9,6 +9,7 @@ It provides a robust dynamic Provider plugin system, an Incremental Sync engine 
 *   **Storage Abstraction (`IArchiveStorage`)**: Completely decouples storage mechanisms. Switch between Local File System, Database, or AWS S3 without changing any core logic or API code.
 *   **Atomic Downloads**: Uses `.tmp` files during downloading and renaming to guarantee absolutely zero corrupted images upon network interruption.
 *   **Memory-Safe Media Proxy**: Serves all images using async byte streaming chunking (8KB), guaranteeing OOM (Out Of Memory) immunity even under extreme concurrency.
+*   **Global Task Management**: Robust async background task orchestrator with Graceful Shutdown (interrupt-safe), global download concurrency limits, and Task Idempotence (prevents duplicate syncing).
 *   **Incremental Sync Engine**: Downloads only missing or failed chapters to preserve bandwidth and avoid bans.
 *   **State Machine Lifecycle**: Tracks chapter states (PENDING, DOWNLOADING, COMPLETED, FAILED) ensuring robust resume capabilities on network failure.
 *   **Bounded Contexts**: Strictly separated `archive` (Management/Writing) and `library` (Serving/Reading) domains.
@@ -125,10 +126,11 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 
 ### Archival Management API (Writing)
 *   `GET /api/v1/archive/` : View tracking health status.
+*   `GET /api/v1/archive/sync/active` : Get a list of all currently active background sync tasks.
 *   `GET /api/v1/archive/{provider_id}/{comic_id}` : Get metadata for a specific archived comic.
 *   `GET /api/v1/archive/{provider_id}/{comic_id}/progress` : Get real-time detailed sync progress (active chapters and pages downloaded).
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/track` : Track without downloading.
-*   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger background incremental sync.
+*   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger idempotent background incremental sync.
 
 ### Library Serving API (Reading)
 *   `GET /api/v1/library/explore` : Explore all locally available comics.
