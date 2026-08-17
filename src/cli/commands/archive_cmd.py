@@ -54,10 +54,11 @@ def sync_comic(
     observer = RichProgressObserver()
     try:
         archived = asyncio.run(archiver.sync_comic(provider_id, comic_id, observer=observer))
+        archive_view.render_sync_success(archived)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        console.print("\n[bold yellow]Sync manually cancelled by user. Progress has been safely saved.[/bold yellow]")
     finally:
         observer.progress.stop()
-        
-    archive_view.render_sync_success(archived)
 
 @archive_app.command(name="list")
 def list_archives():

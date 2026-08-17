@@ -107,53 +107,60 @@ class ArchiverEngine:
         if observer:
             observer.on_sync_start(len(delta_chapters))
             
-        async with httpx.AsyncClient() as client:
-            for chapter in delta_chapters:
-                try:
-                    images = self.manager.fetch_chapter_images(comic_id, chapter.id)
+        try:
+            async with httpx.AsyncClient() as client:
+                for chapter in delta_chapters:
+                    try:
+                        images = self.manager.fetch_chapter_images(comic_id, chapter.id)
+                        
+                        archived_comic.chapters[chapter.id] = ArchivedChapter(
+                            chapter_id=chapter.id,
+                            title=chapter.title,
+                            page_count=len(images),
+                            status=DownloadStatus.DOWNLOADING
+                        )
+                        self.storage.save_comic(archived_comic)
+                        
+                        if observer:
+                            observer.on_chapter_start(chapter.id, chapter.title, len(images))
+                            
+                        tasks = []
+                        for index, image in enumerate(images):
+                            if self.storage.check_image_exists(provider_id, comic_id, chapter.id, index):
+                                if observer:
+                                    observer.on_page_downloaded(chapter.id, index)
+                                continue
+                            
+                            tasks.append(self._download_image(client, provider_id, comic_id, chapter.id, index, image.url, observer))
+                        
+                        if tasks:
+                            await asyncio.gather(*tasks)
+                        
+                        archived_comic.chapters[chapter.id].status = DownloadStatus.COMPLETED
+                        archived_comic.chapters[chapter.id].local_path = f"{provider_id}/{comic_id}/{chapter.id}"
+                        
+                        if observer:
+                            observer.on_chapter_complete(chapter.id)
+                            
+                    except Exception as e:
+                        logger.error(f"Failed to download chapter [red]{chapter.title}[/]: {e}")
+                        if chapter.id in archived_comic.chapters:
+                            archived_comic.chapters[chapter.id].status = DownloadStatus.FAILED
                     
-                    archived_comic.chapters[chapter.id] = ArchivedChapter(
-                        chapter_id=chapter.id,
-                        title=chapter.title,
-                        page_count=len(images),
-                        status=DownloadStatus.DOWNLOADING
-                    )
+                    archived_comic.updated_at = datetime.now()
                     self.storage.save_comic(archived_comic)
-                    
-                    if observer:
-                        observer.on_chapter_start(chapter.id, chapter.title, len(images))
-                        
-                    tasks = []
-                    for index, image in enumerate(images):
-                        if self.storage.check_image_exists(provider_id, comic_id, chapter.id, index):
-                            if observer:
-                                observer.on_page_downloaded(chapter.id, index)
-                            continue
-                        
-                        tasks.append(self._download_image(client, provider_id, comic_id, chapter.id, index, image.url, observer))
-                    
-                    if tasks:
-                        await asyncio.gather(*tasks)
-                    
-                    archived_comic.chapters[chapter.id].status = DownloadStatus.COMPLETED
-                    archived_comic.chapters[chapter.id].local_path = f"{provider_id}/{comic_id}/{chapter.id}"
-                    
-                    if observer:
-                        observer.on_chapter_complete(chapter.id)
-                        
-                except Exception as e:
-                    logger.error(f"Failed to download chapter [red]{chapter.title}[/]: {e}")
-                    if chapter.id in archived_comic.chapters:
-                        archived_comic.chapters[chapter.id].status = DownloadStatus.FAILED
-                
-                archived_comic.updated_at = datetime.now()
-                self.storage.save_comic(archived_comic)
 
-        if observer:
-            observer.on_sync_complete()
-                
-        logger.info(f"Sync complete for [cyan]{archived_comic.title}[/]")
-        return archived_comic
+            if observer:
+                observer.on_sync_complete()
+                    
+            logger.info(f"Sync complete for [cyan]{archived_comic.title}[/]")
+            return archived_comic
+            
+        except asyncio.CancelledError:
+            logger.warning(f"Sync was gracefully cancelled for [cyan]{archived_comic.title}[/]. Saving state...")
+            archived_comic.updated_at = datetime.now()
+            self.storage.save_comic(archived_comic)
+            raise
 
     def delete_archived_comic(self, provider_id: str, comic_id: str):
         archived = self.storage.get_comic(provider_id, comic_id)

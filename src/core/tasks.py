@@ -48,6 +48,18 @@ class TaskManager:
         """
         return list(self._active_tasks.keys())
 
+    def cancel(self, task_id: str) -> bool:
+        """
+        Cancel a specific active task by its ID.
+        Returns True if the task was found and cancelled, False otherwise.
+        """
+        if task_id in self._active_tasks:
+            task = self._active_tasks[task_id]
+            task.cancel()
+            logger.info(f"Cancellation requested for task '{task_id}'.")
+            return True
+        return False
+
     async def shutdown(self) -> None:
         """
         Cancel all active tasks and wait for them to finish cleanly.

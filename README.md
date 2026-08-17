@@ -152,6 +152,7 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 *   `GET /api/v1/archive/{provider_id}/{comic_id}/progress` : Get real-time detailed sync progress (active chapters and pages downloaded).
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/track` : Track without downloading.
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger idempotent background incremental sync.
+*   `DELETE /api/v1/archive/{provider_id}/{comic_id}/sync` : Gracefully cancel an active background sync task.
 
 ### Library Serving API (Reading)
 *   `GET /api/v1/library/explore` : Explore all locally available comics.

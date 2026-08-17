@@ -75,6 +75,21 @@ async def sync_comic(
         
     return {"message": f"Incremental sync started for {comic_id} on {provider_id} in the background.", "status": "started"}
 
+@archive_router.delete("/{provider_id}/{comic_id}/sync")
+async def cancel_sync_comic(
+    provider_id: str, 
+    comic_id: str, 
+    request: Request
+):
+    """Cancel an active background sync task."""
+    task_id = f"sync::{provider_id}::{comic_id}"
+    cancelled = request.app.state.task_manager.cancel(task_id)
+    
+    if cancelled:
+        return {"message": f"Sync task for {comic_id} on {provider_id} has been cancelled.", "status": "cancelled"}
+    else:
+        return {"message": f"No active sync task found for {comic_id} on {provider_id}.", "status": "not_found"}
+
 @archive_router.delete("/{provider_id}/{comic_id}")
 def delete_archived_comic(
     provider_id: str, 
