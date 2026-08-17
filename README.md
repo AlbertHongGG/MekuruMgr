@@ -12,7 +12,9 @@ It provides a robust dynamic Provider plugin system, an Incremental Sync engine 
 *   **Global Task Management**: Robust async background task orchestrator with Graceful Shutdown (interrupt-safe), global download concurrency limits, and Task Idempotence (prevents duplicate syncing).
 *   **Incremental Sync Engine**: Downloads only missing or failed chapters to preserve bandwidth and avoid bans.
 *   **State Machine Lifecycle**: Tracks chapter states (PENDING, DOWNLOADING, COMPLETED, FAILED) ensuring robust resume capabilities on network failure.
-*   **Bounded Contexts**: Strictly separated `archive` (Management/Writing) and `library` (Serving/Reading) domains.
+*   **Bounded Contexts**: Strictly separated `archive` (Management/Writing), `library` (Serving/Reading), and `user` (Personalization/History) domains.
+*   **Storage Abstract Factory Pattern**: The `StorageProvider` pattern strictly isolates storage mechanisms (JSON, SQLite) from domain repositories (`ArchiveRepo`, `UserRepo`). 
+*   **CQRS Data Projection**: The `UserService` perfectly aggregates physical file status from the Library with personal reading metadata into unified models (`UserLibraryItem`), serving pristine data straight to the Frontend.
 *   **Pydantic V2 Validation**: Uses the latest `TypeAdapter` for strict, safe, and robust JSON array validations from external sources.
 
 ---
@@ -107,6 +109,25 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
     uv run python cli.py library read <comic_id> <chapter_id>
     ```
 
+### User Management (user)
+
+*   List Favorite Comics (Projected with library metadata):
+    ```bash
+    uv run python cli.py user favorites
+    ```
+*   Toggle Favorite Status:
+    ```bash
+    uv run python cli.py user favorite <comic_id>
+    ```
+*   Update Chapter Reading Progress:
+    ```bash
+    uv run python cli.py user read <comic_id> <chapter_id> <page_index>
+    ```
+*   View User Interaction Status for a Comic:
+    ```bash
+    uv run python cli.py user status <comic_id>
+    ```
+
 ---
 
 ## Server API
@@ -138,6 +159,12 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 *   `GET /api/v1/library/{provider_id}/{comic_id}` : Get comic details and its COMPLETED chapters.
 *   `GET /api/v1/library/{provider_id}/{comic_id}/chapters` : Get only the COMPLETED chapters for a comic.
 *   `GET /api/v1/library/{provider_id}/{comic_id}/chapters/{chapter_id}` : Get a list of absolute media proxy URLs for all images in the chapter.
+
+### User Profile API (History & Preferences)
+*   `GET /api/v1/user/favorites` : Get a combined list of favorite comics and their library completion status.
+*   `GET /api/v1/user/interactions/{provider_id}/{comic_id}` : Get the complete interaction status (favorites, reading history) for a specific comic.
+*   `POST /api/v1/user/interactions/{provider_id}/{comic_id}/favorite` : Toggle favorite status.
+*   `POST /api/v1/user/interactions/{provider_id}/{comic_id}/read` : Update reading progress for a specific chapter and page.
 
 ### Media Streaming Proxy (Image Serving)
 

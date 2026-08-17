@@ -5,6 +5,7 @@ from src.core.registry import registry
 from src.cli.commands.comic_cmd import comic_app
 from src.cli.commands.archive_cmd import archive_app
 from src.cli.commands.library_cmd import library_app
+from src.cli.commands.user_cmd import user_app
 
 # Global setup
 
@@ -16,6 +17,7 @@ app = typer.Typer(
 app.add_typer(comic_app, name="comic")
 app.add_typer(archive_app, name="archive")
 app.add_typer(library_app, name="library")
+app.add_typer(user_app, name="user")
 
 @app.callback()
 def main(verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")):
