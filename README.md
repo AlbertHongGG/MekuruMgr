@@ -45,6 +45,12 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 
 ### Remote Fetching (comic)
 
+*   Explore Comics (Discover popular comics):
+    ```bash
+    uv run python cli.py comic explore
+    # With parameters:
+    uv run python cli.py comic explore --page 2 --page-size 50
+    ```
 *   Search Comics:
     ```bash
     uv run python cli.py comic search "keyword"
@@ -83,6 +89,10 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
 
 ### Library Access (library)
 
+*   Search Local Library:
+    ```bash
+    uv run python cli.py library search "keyword"
+    ```
 *   List Available Comics (Clean view of readable comics):
     ```bash
     uv run python cli.py library list
@@ -107,7 +117,8 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### Remote API (Proxy)
-*   `GET /api/v1/comics/{provider_id}/search?keyword=...`
+*   `GET /api/v1/comics/{provider_id}/explore?page=1&page_size=30`
+*   `GET /api/v1/comics/{provider_id}/search?keyword=...&page=1&page_size=30`
 *   `GET /api/v1/comics/{provider_id}/{comic_id}`
 *   `GET /api/v1/comics/{provider_id}/{comic_id}/chapters`
 *   `GET /api/v1/comics/{provider_id}/{comic_id}/chapters/{chapter_id}/images`
@@ -118,6 +129,7 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 *   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger background incremental sync.
 
 ### Library Serving API (Reading)
+*   `GET /api/v1/library/search?keyword=...` : Search for downloaded comics.
 *   `GET /api/v1/library/` : Get a clean list of all readable comics.
 *   `GET /api/v1/library/{provider_id}/{comic_id}` : Get comic details and its COMPLETED chapters.
 *   `GET /api/v1/library/{provider_id}/{comic_id}/chapters/{chapter_id}` : Get a list of absolute media proxy URLs for all images in the chapter.

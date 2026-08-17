@@ -81,21 +81,39 @@ class ComicWifiProvider(BaseComicProvider):
         return pages
 
     def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
-        req = ComicSearchRequest(key=keyword, page=page, pageSize=page_size)
-        raw_results = self._api.search_comics(req)
-        
-        # Mapping
-        comics = []
-        for item in raw_results:
-            mod = item.module_item
-            comics.append(Comic(
-                id=mod.id,
-                title=mod.name,
-                cover_url=mod.cover,
-                description=mod.desc,
-                tags=mod.tags
-            ))
-        return comics
+        try:
+            req = ComicSearchRequest(key=keyword, page=page, pageSize=page_size)
+            items = self._api.search_comics(req)
+            return [
+                Comic(
+                    id=item.module_item.id,
+                    title=item.module_item.name,
+                    cover_url=item.module_item.cover,
+                    description=item.module_item.desc,
+                    tags=item.module_item.tags
+                )
+                for item in items
+            ]
+        except Exception as e:
+            raise ApiLogicError(f"Failed to search comics: {str(e)}")
+
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+        try:
+            from src.providers.comicwifi.models.requests import ComicExploreRequest
+            req = ComicExploreRequest(page=page, pageSize=page_size)
+            items = self._api.explore_comics(req)
+            return [
+                Comic(
+                    id=item.module_item.id,
+                    title=item.module_item.name,
+                    cover_url=item.module_item.cover,
+                    description=item.module_item.desc,
+                    tags=item.module_item.tags
+                )
+                for item in items
+            ]
+        except Exception as e:
+            raise ApiLogicError(f"Failed to explore comics: {str(e)}")
 
 # Register this provider automatically when the module is imported
 registry.register(ComicWifiProvider)

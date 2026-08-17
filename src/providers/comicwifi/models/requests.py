@@ -21,3 +21,10 @@ class ComicSearchRequest(BaseRequest):
     key: str
     page: int = 1
     pageSize: int = 30
+
+class ComicExploreRequest(BaseRequest):
+    page: int = 1
+    pageSize: int = 30
+    labelName: str = "全部,人氣"
+    orderType: str = ""
+    label: str = ""

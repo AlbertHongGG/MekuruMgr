@@ -41,3 +41,8 @@ class BaseComicProvider(ABC):
     def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
         """Search for comics matching a keyword."""
         pass
+
+    @abstractmethod
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+        """Explore/discover comics from the provider."""
+        pass

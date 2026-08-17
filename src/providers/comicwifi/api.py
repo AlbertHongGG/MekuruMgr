@@ -2,7 +2,7 @@ from typing import List
 from pydantic import TypeAdapter
 
 from src.providers.comicwifi.http_client import BaseHttpClient
-from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest
+from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest, ComicExploreRequest
 from src.providers.comicwifi.models.responses import ComicDetail, ChapterList, ChapterReadData, SearchResultItem
 
 class ComicApiClient:
@@ -28,5 +28,10 @@ class ComicApiClient:
 
     def search_comics(self, req: ComicSearchRequest) -> List[SearchResultItem]:
         raw_data = self._http.post("/api/comic/search", data=req.model_dump(by_alias=True))
+        ta = TypeAdapter(List[SearchResultItem])
+        return ta.validate_python(raw_data)
+
+    def explore_comics(self, req: ComicExploreRequest) -> List[SearchResultItem]:
+        raw_data = self._http.post("/api/comic/classify_list", data=req.model_dump(by_alias=True))
         ta = TypeAdapter(List[SearchResultItem])
         return ta.validate_python(raw_data)

@@ -57,3 +57,8 @@ class ComicManager:
         """Search for comics using the active provider."""
         logger.info(f"Searching comics with keyword: [green]{keyword}[/] from [magenta]{self.provider.provider_id}[/]")
         return self.provider.search_comics(keyword, page, page_size)
+
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+        """Explore/discover comics using the active provider."""
+        logger.info(f"Exploring comics from [magenta]{self.provider.provider_id}[/]")
+        return self.provider.explore_comics(page, page_size)

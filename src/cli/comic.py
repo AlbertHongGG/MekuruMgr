@@ -134,3 +134,32 @@ def list_images(
         table.add_row(str(img.order), img.url)
 
     rprint(table)
+
+@comic_app.command(name="explore")
+def explore_comic(
+    page: int = typer.Option(1, help="Page number."),
+    page_size: int = typer.Option(30, help="Number of items per page."),
+    provider_id: str = typer.Option(
+        None, "--provider", "-p", help="Provider ID. Uses env default if omitted."
+    )
+):
+    """Explore/discover comics from the provider."""
+    provider_id = provider_id or app_settings.default_provider
+    manager = ComicManager()
+    manager.use(provider_id)
+
+    with console.status(f"Exploring comics from {provider_id}...", spinner="dots"):
+        comics = manager.explore_comics(page, page_size)
+        
+    table = Table(
+        title=f"[{manager.provider.provider_name}] Explore Results",
+        border_style="white"
+    )
+    table.add_column("ID", style="magenta")
+    table.add_column("Title", style="green")
+    table.add_column("Tags", style="yellow")
+    
+    for c in comics:
+        table.add_row(c.id, c.title, ", ".join(c.tags))
+
+    rprint(table)

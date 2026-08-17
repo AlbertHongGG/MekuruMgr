@@ -20,6 +20,20 @@ def search_comics(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@comic_router.get("/{provider_id}/explore", response_model=List[Comic])
+def explore_comics(
+    provider_id: str, 
+    page: int = Query(1, ge=1), 
+    page_size: int = Query(30, ge=1, le=100)
+):
+    """Explore/discover comics from a specific provider."""
+    try:
+        manager = ComicManager()
+        manager.use(provider_id)
+        return manager.explore_comics(page, page_size)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @comic_router.get("/{provider_id}/{comic_id}", response_model=Comic)
 def get_comic(provider_id: str, comic_id: str):
     """Get comic details from a specific provider."""
