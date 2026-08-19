@@ -10,6 +10,7 @@ class ReadingProgress(BaseModel):
 class UserComicInteraction(BaseModel):
     provider_id: str
     comic_id: str
+    title: str = ""
     is_favorite: bool = False
     reading_history: Dict[str, ReadingProgress] = Field(default_factory=dict) # chapter_id -> progress
     last_read_chapter_id: Optional[str] = None

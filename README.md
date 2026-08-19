@@ -19,6 +19,72 @@ It provides a robust dynamic Provider plugin system, an Incremental Sync engine 
 
 ---
 
+## Adding a New Provider
+
+ComicMgr's dynamic Provider plugin system allows you to easily integrate new comic sources. To add a new provider, you need to create a class that inherits from `BaseComicProvider` located in `src/core/provider.py`. 
+
+Your provider class must implement the following properties and API interfaces to ensure standard domain models are returned:
+
+### Required Properties
+*   `provider_id` (str): A unique identifier for your provider (e.g., `'comicwifi'`).
+*   `provider_name` (str): A human-readable name for your provider (e.g., `'ComicWifi Official'`).
+
+### Required API Interfaces
+
+*   **`get_comic_detail(comic_id: str) -> Comic`**
+    Fetches basic metadata for a specific comic. This includes title, author, description, and cover image URL.
+    
+*   **`get_chapter_list(comic_id: str) -> List[Chapter]`**
+    Fetches the list of all available chapters for a specific comic.
+
+*   **`get_chapter_images(comic_id: str, chapter_id: str) -> List[PageImage]`**
+    Fetches the actual image pages (URLs or paths) for a specific chapter.
+
+*   **`search_comics(keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]`**
+    Performs a search based on a keyword and returns a paginated list of matching comics.
+
+*   **`explore_comics(page: int = 1, page_size: int = 30) -> List[Comic]`**
+    Returns a paginated list of comics for the discovery/explore page.
+
+### Example Provider Skeleton
+
+```python
+from typing import List
+from src.core.provider import BaseComicProvider
+from src.domain.models import Comic, Chapter, PageImage
+
+class MyCustomProvider(BaseComicProvider):
+    @property
+    def provider_id(self) -> str:
+        return "my_custom_provider"
+
+    @property
+    def provider_name(self) -> str:
+        return "My Custom Provider"
+
+    def get_comic_detail(self, comic_id: str) -> Comic:
+        # Implementation to fetch metadata
+        pass
+
+    def get_chapter_list(self, comic_id: str) -> List[Chapter]:
+        # Implementation to fetch chapters
+        pass
+
+    def get_chapter_images(self, comic_id: str, chapter_id: str) -> List[PageImage]:
+        # Implementation to fetch images
+        pass
+
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+        # Implementation to search comics
+        pass
+
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+        # Implementation to discover comics
+        pass
+```
+
+---
+
 ## Installation & Setup
 
 This project uses `uv` for fast dependency management.

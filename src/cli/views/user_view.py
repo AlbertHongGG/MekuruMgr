@@ -1,11 +1,11 @@
 from rich.console import Console
 from rich.table import Table
 from typing import List
-from src.domain.user_models import UserLibraryItem, UserComicInteraction
+from src.domain.user_models import UserComicInteraction
 
 console = Console()
 
-def render_favorites(favorites: List[UserLibraryItem]):
+def render_favorites(favorites: List[UserComicInteraction]):
     if not favorites:
         console.print("[yellow]No favorites found in your library.[/yellow]")
         return
@@ -14,7 +14,6 @@ def render_favorites(favorites: List[UserLibraryItem]):
     table.add_column("Provider", style="cyan")
     table.add_column("Comic ID", style="magenta")
     table.add_column("Title", style="green")
-    table.add_column("Completed Chapters", justify="right", style="blue")
     table.add_column("Last Read", style="yellow")
     
     for item in favorites:
@@ -22,8 +21,7 @@ def render_favorites(favorites: List[UserLibraryItem]):
         table.add_row(
             item.provider_id,
             item.comic_id,
-            item.title,
-            str(item.completed_chapters_count),
+            item.title or "[No Title Saved]",
             last_read
         )
         

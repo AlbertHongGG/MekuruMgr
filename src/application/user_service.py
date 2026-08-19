@@ -3,16 +3,14 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.storage.core.user_interface import IUserStorage
-from src.application.library_service import LibraryService
 from src.domain.user_models import UserComicInteraction, ReadingProgress
 from src.domain.exceptions import AppBaseError
 
 logger = logging.getLogger(__name__)
 
 class UserService:
-    def __init__(self, user_storage: IUserStorage, library_service: LibraryService):
+    def __init__(self, user_storage: IUserStorage):
         self.storage = user_storage
-        self.library_service = library_service
 
     def get_interaction(self, provider_id: str, comic_id: str) -> UserComicInteraction:
         """Get or create an interaction for a comic."""
@@ -21,18 +19,23 @@ class UserService:
             interaction = UserComicInteraction(provider_id=provider_id, comic_id=comic_id)
         return interaction
 
-    def toggle_favorite(self, provider_id: str, comic_id: str) -> bool:
+    def toggle_favorite(self, provider_id: str, comic_id: str, title: str = "") -> bool:
         """Toggle favorite status. Returns the new status."""
         interaction = self.get_interaction(provider_id, comic_id)
+        if title and title != interaction.title:
+            interaction.title = title
+            
         interaction.is_favorite = not interaction.is_favorite
         interaction.updated_at = datetime.now()
         self.storage.save_interaction(interaction)
         logger.info(f"Toggled favorite for {comic_id} on {provider_id} to {interaction.is_favorite}")
         return interaction.is_favorite
 
-    def update_reading_progress(self, provider_id: str, comic_id: str, chapter_id: str, page_index: int) -> None:
+    def update_reading_progress(self, provider_id: str, comic_id: str, chapter_id: str, page_index: int, title: str = "") -> None:
         """Update the reading progress for a specific chapter."""
         interaction = self.get_interaction(provider_id, comic_id)
+        if title and title != interaction.title:
+            interaction.title = title
         
         if chapter_id not in interaction.reading_history:
             interaction.reading_history[chapter_id] = ReadingProgress(chapter_id=chapter_id, page_index=page_index)
