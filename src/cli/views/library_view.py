@@ -27,8 +27,10 @@ def render_library_list(comics: List[LocalComicItem], title: str = "Local Comic 
     rprint(table)
 
 def render_library_detail(detail: LocalComicDetail, chapters: List[LocalChapterItem]):
+    author_str = detail.author if detail.author else "N/A"
     rprint(Panel(
         f"[bold]Title:[/] {detail.title}\n"
+        f"[bold]Author:[/] {author_str}\n"
         f"[bold]Tags:[/] {', '.join(detail.tags)}\n"
         f"[bold]Description:[/] {detail.description[:100]}...\n"
         f"[bold]Cover:[/] {detail.cover_url}",

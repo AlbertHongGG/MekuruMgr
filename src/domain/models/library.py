@@ -1,5 +1,5 @@
-﻿from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel
+from typing import List, Optional
 
 class LocalComicItem(BaseModel):
     """Basic comic info for library listing."""
@@ -20,6 +20,7 @@ class LocalComicDetail(BaseModel):
     provider_id: str
     comic_id: str
     title: str
+    author: Optional[str] = None
     tags: List[str]
     description: str
     cover_url: str

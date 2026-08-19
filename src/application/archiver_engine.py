@@ -57,6 +57,7 @@ class ArchiverEngine:
             provider_id=provider_id,
             comic_id=comic_id,
             title=comic_detail.title,
+            author=comic_detail.author,
             tags=comic_detail.tags,
             description=comic_detail.description,
             cover_url=f"{provider_id}/{comic_id}/{filename}",

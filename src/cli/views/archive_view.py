@@ -5,9 +5,11 @@ from rich import print as rprint
 from src.domain.models import ArchivedComic, DownloadStatus
 
 def render_track_success(archived: ArchivedComic):
+    author_str = archived.author if archived.author else "N/A"
     rprint(Panel(
         f"[green]Successfully tracked![/green]\n"
         f"Title: {archived.title}\n"
+        f"Author: {author_str}\n"
         f"Local Path: {archived.local_path}",
         title="[bold]Tracking Complete[/bold]"
     ))

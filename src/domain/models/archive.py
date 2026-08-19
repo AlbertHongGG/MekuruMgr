@@ -1,5 +1,5 @@
-﻿from pydantic import BaseModel, Field
-from typing import List, Dict
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
 from enum import Enum
 from datetime import datetime
 
@@ -20,6 +20,7 @@ class ArchivedComic(BaseModel):
     provider_id: str
     comic_id: str
     title: str
+    author: Optional[str] = None
     tags: List[str]
     description: str
     cover_url: str

@@ -33,10 +33,15 @@ class WebtoonProvider(BaseComicProvider):
         authors = [a.authorName for a in dto.title.authorList]
         author_str = ", ".join(authors) if authors else None
         
-        # Parse tags if available
+        # Parse tags and status if available
         tags = []
+        status = ""
         if dto.tag and dto.tag.tagList:
-            tags = [tag.text for tag in dto.tag.tagList]
+            for tag in dto.tag.tagList:
+                if tag.type and "STATUS" in tag.type.upper():
+                    status = tag.text
+                else:
+                    tags.append(tag.text)
         
         return ComicDetail(
             id=comic_id,
@@ -45,7 +50,8 @@ class WebtoonProvider(BaseComicProvider):
             cover_url=self._get_full_image_url(dto.title.posterThumbnailUrl),
             author=author_str,
             description=dto.title.synopsis,
-            tags=tags
+            tags=tags,
+            update_status=status
         )
 
     def get_chapter_list(self, comic_id: str) -> List[Chapter]:

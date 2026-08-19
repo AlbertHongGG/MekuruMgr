@@ -71,6 +71,7 @@ class LibraryService:
             provider_id=c.provider_id,
             comic_id=c.comic_id,
             title=c.title,
+            author=c.author,
             tags=c.tags,
             description=c.description,
             cover_url=self._build_url(c.cover_url)
