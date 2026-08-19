@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from src.application.comic_manager import ComicManager
-from src.domain.models import Comic, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
 
 comic_router = APIRouter(prefix="/api/v1/comics", tags=["Comics"])
 
-@comic_router.get("/{provider_id}/search", response_model=List[Comic])
+@comic_router.get("/{provider_id}/search", response_model=List[ComicSearchResult])
 def search_comics(
     provider_id: str, 
     keyword: str = Query(..., description="Keyword to search"), 
@@ -20,7 +20,7 @@ def search_comics(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@comic_router.get("/{provider_id}/explore", response_model=List[Comic])
+@comic_router.get("/{provider_id}/explore", response_model=List[ComicSearchResult])
 def explore_comics(
     provider_id: str, 
     page: int = Query(1, ge=1), 
@@ -34,7 +34,7 @@ def explore_comics(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@comic_router.get("/{provider_id}/{comic_id}", response_model=Comic)
+@comic_router.get("/{provider_id}/{comic_id}", response_model=ComicDetail)
 def get_comic(provider_id: str, comic_id: str):
     """Get comic details from a specific provider."""
     try:

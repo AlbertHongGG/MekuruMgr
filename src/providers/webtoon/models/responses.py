@@ -28,8 +28,16 @@ class WebtoonTitleDetail(BaseModel):
 class WebtoonEpisodeMeta(BaseModel):
     totalEpisodeCount: int
 
+class WebtoonTagItem(BaseModel):
+    text: str
+    type: str
+
+class WebtoonTagInfo(BaseModel):
+    tagList: List[WebtoonTagItem]
+
 class WebtoonTitleHomeResult(BaseModel):
     title: WebtoonTitleDetail
+    tag: Optional[WebtoonTagInfo] = None
     episodeMeta: WebtoonEpisodeMeta
 
 # --- Episode List ---

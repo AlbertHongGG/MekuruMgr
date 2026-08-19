@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Union
 
 from src.core.provider import BaseComicProvider
-from src.domain.models import Comic, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 
@@ -34,7 +34,7 @@ class ComicManager:
             raise RuntimeError("No provider selected. Call use('provider_id') first.")
         return self._active_provider
 
-    def fetch_comic_detail(self, comic_id: str) -> Comic:
+    def fetch_comic_detail(self, comic_id: str) -> ComicDetail:
         """Fetch the details of a specific comic using the active provider."""
         logger.info(f"Fetching comic detail: [green]{comic_id}[/] from [magenta]{self.provider.provider_id}[/]")
         return self.provider.get_comic_detail(comic_id)
@@ -53,12 +53,12 @@ class ComicManager:
         """List all available providers."""
         return registry.list_providers()
 
-    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         """Search for comics using the active provider."""
         logger.info(f"Searching comics with keyword: [green]{keyword}[/] from [magenta]{self.provider.provider_id}[/]")
         return self.provider.search_comics(keyword, page, page_size)
 
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         """Explore/discover comics using the active provider."""
         logger.info(f"Exploring comics from [magenta]{self.provider.provider_id}[/]")
         return self.provider.explore_comics(page, page_size)

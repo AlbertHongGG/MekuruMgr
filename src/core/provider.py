@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TypeVar
 
-from src.domain.models import Comic, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
 
 class BaseComicProvider(ABC):
     """
     The standard contract that ALL comic providers must implement.
-    Whether it's ComicWifi, a friend's server, or a local file source,
-    it MUST implement these methods and return standardized domain models.
     """
     
     @property
@@ -23,7 +21,7 @@ class BaseComicProvider(ABC):
         pass
 
     @abstractmethod
-    def get_comic_detail(self, comic_id: str) -> Comic:
+    def get_comic_detail(self, comic_id: str) -> ComicDetail:
         """Fetch basic details and metadata for a specific comic."""
         pass
 
@@ -38,11 +36,11 @@ class BaseComicProvider(ABC):
         pass
 
     @abstractmethod
-    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         """Search for comics matching a keyword."""
         pass
 
     @abstractmethod
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         """Explore/discover comics from the provider."""
         pass

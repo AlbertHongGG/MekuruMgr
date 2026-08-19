@@ -2,7 +2,7 @@ from typing import List
 import logging
 
 from src.core.provider import BaseComicProvider
-from src.domain.models import Comic, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 
@@ -31,12 +31,13 @@ class ComicWifiProvider(BaseComicProvider):
     def provider_name(self) -> str:
         return "ComicWifi Official"
 
-    def get_comic_detail(self, comic_id: str) -> Comic:
+    def get_comic_detail(self, comic_id: str) -> ComicDetail:
         raw_detail = self._api.get_comic_detail(ComicDetailRequest(comicId=comic_id))
         
         # Mapping to Standard Domain Model
-        return Comic(
+        return ComicDetail(
             id=str(raw_detail.id),
+            provider_id=self.provider_id,
             title=raw_detail.name or "Unknown Title",
             cover_url=raw_detail.cover or "",
             description=raw_detail.desc or "",
@@ -53,15 +54,12 @@ class ComicWifiProvider(BaseComicProvider):
             chapters.append(Chapter(
                 id=str(ch.chapter_id),
                 title=ch.chapter_name or f"Chapter {idx+1}",
-                order=float(idx),
                 cover_url=ch.chapter_cover or "",
-                is_vip=bool(ch.showVipIcon),
                 publish_time=ch.create_time or ""
             ))
         return chapters
 
     def get_chapter_images(self, comic_id: str, chapter_id: str) -> List[PageImage]:
-        # Spammy log removed
         raw_images = self._api.get_chapter_images(ChapterImagesRequest(comicId=comic_id, chapterId=chapter_id))
         
         # Mapping
@@ -71,39 +69,35 @@ class ComicWifiProvider(BaseComicProvider):
                 url=img.url,
                 width=img.width,
                 height=img.height,
-                order=idx
+                index=idx
             ))
         return pages
 
-    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         try:
             req = ComicSearchRequest(key=keyword, page=page, pageSize=page_size)
             items = self._api.search_comics(req)
             return [
-                Comic(
+                ComicSearchResult(
                     id=item.module_item.id,
-                    title=item.module_item.name,
-                    cover_url=item.module_item.cover,
-                    description=item.module_item.desc,
-                    tags=item.module_item.tags
+                    provider_id=self.provider_id
                 )
                 for item in items
             ]
         except Exception as e:
+            from src.domain.exceptions import ApiLogicError
             raise ApiLogicError(f"Failed to search comics: {str(e)}")
 
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[Comic]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         try:
             from src.providers.comicwifi.models.requests import ComicExploreRequest
+            from src.domain.exceptions import ApiLogicError
             req = ComicExploreRequest(page=page, pageSize=page_size)
             items = self._api.explore_comics(req)
             return [
-                Comic(
+                ComicSearchResult(
                     id=item.module_item.id,
-                    title=item.module_item.name,
-                    cover_url=item.module_item.cover,
-                    description=item.module_item.desc,
-                    tags=item.module_item.tags
+                    provider_id=self.provider_id
                 )
                 for item in items
             ]
