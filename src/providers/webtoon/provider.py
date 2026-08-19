@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 from src.core.provider import BaseComicProvider
 from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage, ComicExploreResult
 from src.core.registry import registry
@@ -113,5 +113,15 @@ class WebtoonProvider(BaseComicProvider):
             ))
             
         return comics
+
+    async def download_image(self, client: Any, url: str) -> tuple[bytes, str]:
+        headers = {
+            "Referer": "https://www.webtoons.com/",
+            "User-Agent": "nApps (Android 9; 22081212C; linewebtoon; 3.9.9)"
+        }
+        response = await client.get(url, headers=headers, timeout=30.0)
+        response.raise_for_status()
+        content_type = response.headers.get('content-type', '')
+        return response.content, content_type
 
 registry.register(WebtoonProvider)

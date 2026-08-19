@@ -44,3 +44,13 @@ class BaseComicProvider(ABC):
     def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicExploreResult]:
         """Explore/discover comics from the provider."""
         pass
+
+    async def download_image(self, client: Any, url: str) -> tuple[bytes, str]:
+        """
+        Download an image using the provider's specific mechanism.
+        Returns a tuple of (content bytes, content_type string).
+        """
+        response = await client.get(url, timeout=30.0)
+        response.raise_for_status()
+        content_type = response.headers.get('content-type', '')
+        return response.content, content_type

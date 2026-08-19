@@ -25,11 +25,9 @@ class ArchiverEngine:
     async def _download_image(self, client: httpx.AsyncClient, provider_id: str, comic_id: str, chapter_id: str, index: int, url: str, observer: Optional[IProgressObserver] = None):
         async with self.semaphore:
             try:
-                response = await client.get(url, timeout=30.0)
-                response.raise_for_status()
-                content_type = response.headers.get('content-type', '')
-                
-                await self.storage.save_image(provider_id, comic_id, chapter_id, index, response.content, content_type)
+                # Delegate to provider
+                content, content_type = await self.manager.provider.download_image(client, url)
+                await self.storage.save_image(provider_id, comic_id, chapter_id, index, content, content_type)
                     
                 if observer:
                     observer.on_page_downloaded(chapter_id, index)
@@ -49,10 +47,8 @@ class ArchiverEngine:
         
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.get(comic_detail.cover_url, timeout=30.0)
-                response.raise_for_status()
-                content_type = response.headers.get('content-type', '')
-                filename = await self.storage.save_image(provider_id, comic_id, 'cover', 0, response.content, content_type)
+                content, content_type = await self.manager.provider.download_image(client, comic_detail.cover_url)
+                filename = await self.storage.save_image(provider_id, comic_id, 'cover', 0, content, content_type)
             except Exception as e:
                 logger.error(f"Failed to download cover image: {e}")
                 filename = "cover.jpg"
