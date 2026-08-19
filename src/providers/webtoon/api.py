@@ -47,6 +47,20 @@ class WebtoonApiClient:
         result_data = self._extract_result(res)
         return WebtoonSearchResult(**result_data)
 
+    def challenge_genre_title_list_v1(self, genre: str = "ALL", sort_order: str = "MANA", start_index: int = 0, page_size: int = 20) -> Any:
+        from .models.responses import WebtoonChallengeGenreTitleListResult
+        params = DEFAULT_PARAMS.copy()
+        params.update({
+            "genre": genre,
+            "sortOrder": sort_order,
+            "startIndex": start_index,
+            "pageSize": page_size,
+            "v": "1"
+        })
+        res = self.http.get("/lineWebtoon/webtoon/challengeGenreTitleListV1", params)
+        result_data = self._extract_result(res)
+        return WebtoonChallengeGenreTitleListResult(**result_data)
+
     def title_home_main_v3(self, title_no: int) -> WebtoonTitleHomeResult:
         params = DEFAULT_PARAMS.copy()
         params.update({

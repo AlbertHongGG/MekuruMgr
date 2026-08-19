@@ -2,7 +2,7 @@ from typing import List
 from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
-from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
+from src.domain.models import ComicDetail, Chapter, PageImage, ComicExploreResult
 
 def render_comic_detail(provider_name: str, comic: ComicDetail):
     author_str = comic.author if comic.author else "N/A"
@@ -37,6 +37,18 @@ def render_chapters_list(provider_name: str, comic_id: str, chapters: List[Chapt
     rprint(table)
 
 def render_comic_list(title: str, comics: List[ComicDetail]):
+    table = Table(title=title, border_style="white")
+    table.add_column("ID", style="magenta")
+    table.add_column("Title", style="green")
+    table.add_column("Tags", style="yellow")
+    
+    for c in comics:
+        tags_str = ", ".join(c.tags) if c.tags else ""
+        table.add_row(c.id, c.title, tags_str)
+
+    rprint(table)
+
+def render_explore_list(title: str, comics: List[ComicExploreResult]):
     table = Table(title=title, border_style="white")
     table.add_column("ID", style="magenta")
     table.add_column("Title", style="green")

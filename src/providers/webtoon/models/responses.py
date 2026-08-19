@@ -17,6 +17,19 @@ class WebtoonSearchSection(BaseModel):
 class WebtoonSearchResult(BaseModel):
     webtoonSearch: WebtoonSearchSection
 
+# --- Explore (Challenge Genre Title List) ---
+class WebtoonGenre(BaseModel):
+    displayName: str
+
+class WebtoonChallengeTitleItem(BaseModel):
+    titleNo: int
+    readingTitle: str
+    thumbnailImageUrl: str
+    representGenre: WebtoonGenre
+
+class WebtoonChallengeGenreTitleListResult(BaseModel):
+    challengeTitleList: List[WebtoonChallengeTitleItem]
+    
 # --- Title Detail ---
 class WebtoonTitleDetail(BaseModel):
     titleNo: int

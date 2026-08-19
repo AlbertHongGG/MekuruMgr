@@ -19,6 +19,13 @@ class ComicSearchResult(BaseModel):
     id: str
     provider_id: str
 
+class ComicExploreResult(BaseModel):
+    id: str
+    provider_id: str
+    title: str
+    cover_url: str
+    tags: List[str] = Field(default_factory=list)
+
 class ComicDetail(BaseModel):
     id: str
     provider_id: str

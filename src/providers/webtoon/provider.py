@@ -1,6 +1,6 @@
 from typing import List
 from src.core.provider import BaseComicProvider
-from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage, ComicExploreResult
 from src.core.registry import registry
 from .api import WebtoonApiClient
 
@@ -97,7 +97,21 @@ class WebtoonProvider(BaseComicProvider):
             
         return comics
 
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
-        return []
+    def explore_comics(self, page: int = 1, page_size: int = 20) -> List[ComicExploreResult]:
+        # Webtoon explore uses 0-based startIndex
+        start_index = (page - 1) * page_size
+        dto = self.api.challenge_genre_title_list_v1(start_index=start_index, page_size=page_size)
+        
+        comics = []
+        for item in dto.challengeTitleList:
+            comics.append(ComicExploreResult(
+                id=str(item.titleNo),
+                provider_id=self.provider_id,
+                title=item.readingTitle,
+                cover_url=self._get_full_image_url(item.thumbnailImageUrl),
+                tags=[item.representGenre.displayName] if item.representGenre else []
+            ))
+            
+        return comics
 
 registry.register(WebtoonProvider)

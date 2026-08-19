@@ -96,14 +96,7 @@ def explore_comic(
     manager = get_manager(provider_id)
 
     with console.status(f"Exploring comics from {provider_id}...", spinner="dots"):
-        search_results = manager.explore_comics(page, page_size)
-        comics = []
-        for res in search_results:
-            try:
-                detail = manager.fetch_comic_detail(res.id)
-                comics.append(detail)
-            except Exception as e:
-                console.print(f"[yellow]Warning:[/] Failed to fetch detail for {res.id}: {e}")
+        comics = manager.explore_comics(page, page_size)
         
     title = f"[{manager.provider.provider_name}] Explore Results"
-    comic_view.render_comic_list(title, comics)
+    comic_view.render_explore_list(title, comics)

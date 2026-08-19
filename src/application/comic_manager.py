@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Union
 
 from src.core.provider import BaseComicProvider
-from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage, ComicExploreResult
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 
@@ -58,7 +58,7 @@ class ComicManager:
         logger.info(f"Searching comics with keyword: [green]{keyword}[/] from [magenta]{self.provider.provider_id}[/]")
         return self.provider.search_comics(keyword, page, page_size)
 
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicExploreResult]:
         """Explore/discover comics using the active provider."""
         logger.info(f"Exploring comics from [magenta]{self.provider.provider_id}[/]")
         return self.provider.explore_comics(page, page_size)

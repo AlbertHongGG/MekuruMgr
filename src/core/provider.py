@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, TypeVar
 
-from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage, ComicExploreResult
 
 class BaseComicProvider(ABC):
     """
@@ -41,6 +41,6 @@ class BaseComicProvider(ABC):
         pass
 
     @abstractmethod
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicExploreResult]:
         """Explore/discover comics from the provider."""
         pass

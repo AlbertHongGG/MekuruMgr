@@ -2,7 +2,7 @@ from typing import List
 import logging
 
 from src.core.provider import BaseComicProvider
-from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
+from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage, ComicExploreResult
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 
@@ -88,16 +88,19 @@ class ComicWifiProvider(BaseComicProvider):
             from src.domain.exceptions import ApiLogicError
             raise ApiLogicError(f"Failed to search comics: {str(e)}")
 
-    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
+    def explore_comics(self, page: int = 1, page_size: int = 30) -> List[ComicExploreResult]:
         try:
             from src.providers.comicwifi.models.requests import ComicExploreRequest
             from src.domain.exceptions import ApiLogicError
             req = ComicExploreRequest(page=page, pageSize=page_size)
             items = self._api.explore_comics(req)
             return [
-                ComicSearchResult(
+                ComicExploreResult(
                     id=item.module_item.id,
-                    provider_id=self.provider_id
+                    provider_id=self.provider_id,
+                    title=item.module_item.name,
+                    cover_url=item.module_item.cover,
+                    tags=item.module_item.tags or []
                 )
                 for item in items
             ]
