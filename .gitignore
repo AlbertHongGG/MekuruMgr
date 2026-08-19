@@ -13,3 +13,4 @@ wheels/
 # Environment variables
 .env
 data/
+test_webtoon_api.py
