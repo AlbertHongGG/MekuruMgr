@@ -58,7 +58,14 @@ def search_comic(
     manager = get_manager(provider_id)
 
     with console.status(f"Searching for '{keyword}' from {provider_id}...", spinner="dots"):
-        comics = manager.search_comics(keyword, page, page_size)
+        search_results = manager.search_comics(keyword, page, page_size)
+        comics = []
+        for res in search_results:
+            try:
+                detail = manager.fetch_comic_detail(res.id)
+                comics.append(detail)
+            except Exception as e:
+                console.print(f"[yellow]Warning:[/] Failed to fetch detail for {res.id}: {e}")
         
     title = f"[{manager.provider.provider_name}] Search Results for '{keyword}'"
     comic_view.render_comic_list(title, comics)
@@ -89,7 +96,14 @@ def explore_comic(
     manager = get_manager(provider_id)
 
     with console.status(f"Exploring comics from {provider_id}...", spinner="dots"):
-        comics = manager.explore_comics(page, page_size)
+        search_results = manager.explore_comics(page, page_size)
+        comics = []
+        for res in search_results:
+            try:
+                detail = manager.fetch_comic_detail(res.id)
+                comics.append(detail)
+            except Exception as e:
+                console.print(f"[yellow]Warning:[/] Failed to fetch detail for {res.id}: {e}")
         
     title = f"[{manager.provider.provider_name}] Explore Results"
     comic_view.render_comic_list(title, comics)

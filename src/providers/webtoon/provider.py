@@ -53,11 +53,18 @@ class WebtoonProvider(BaseComicProvider):
         
         dto = self.api.title_home_episode_list_v3(title_no, offset=0, page_size=30)
         
+        from datetime import datetime
         chapters = []
         for ep in dto.episodeList:
+            pub_time = ""
+            if ep.exposureYmdt:
+                # convert ms timestamp to YYYY-MM-DD HH:MM:SS
+                pub_time = datetime.fromtimestamp(ep.exposureYmdt / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
+                
             chapters.append(Chapter(
                 id=str(ep.episodeNo),
-                title=ep.episodeTitle
+                title=ep.episodeTitle,
+                publish_time=pub_time
             ))
             
         return chapters

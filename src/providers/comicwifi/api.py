@@ -33,5 +33,6 @@ class ComicApiClient:
 
     def explore_comics(self, req: ComicExploreRequest) -> List[SearchResultItem]:
         raw_data = self._http.post("/api/comic/classify_list", data=req.model_dump(by_alias=True))
+        print(f"raw_data = {raw_data}")
         ta = TypeAdapter(List[SearchResultItem])
         return ta.validate_python(raw_data)

@@ -45,7 +45,7 @@ class WebtoonEpisodeItem(BaseModel):
     episodeNo: int
     episodeTitle: str
     thumbnailUrl: Optional[str] = None
-    # We can add more fields if needed, like readable status
+    exposureYmdt: Optional[int] = None
 
 class WebtoonEpisodeListResult(BaseModel):
     episodeList: List[WebtoonEpisodeItem]

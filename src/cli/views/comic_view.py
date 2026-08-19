@@ -36,12 +36,15 @@ def render_chapters_list(provider_name: str, comic_id: str, chapters: List[Chapt
 
     rprint(table)
 
-def render_comic_list(title: str, comics: List[ComicSearchResult]):
+def render_comic_list(title: str, comics: List[ComicDetail]):
     table = Table(title=title, border_style="white")
     table.add_column("ID", style="magenta")
+    table.add_column("Title", style="green")
+    table.add_column("Tags", style="yellow")
     
     for c in comics:
-        table.add_row(c.id)
+        tags_str = ", ".join(c.tags) if c.tags else ""
+        table.add_row(c.id, c.title, tags_str)
 
     rprint(table)
 
