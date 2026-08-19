@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from src.storage.core.archive_interface import IArchiveStorage
-from src.storage.core.user_interface import IUserStorage
 
 class IStorageProvider(ABC):
     """
@@ -10,8 +9,4 @@ class IStorageProvider(ABC):
     """
     @abstractmethod
     def get_archive_storage(self) -> IArchiveStorage:
-        pass
-        
-    @abstractmethod
-    def get_user_storage(self) -> IUserStorage:
         pass

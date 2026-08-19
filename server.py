@@ -12,7 +12,6 @@ from src.storage.factory import StorageFactory, StorageEngine
 from src.server.comics import comic_router
 from src.server.archive import archive_router
 from src.server.library import library_router
-from src.server.user import user_router
 
 # --- Startup & Setup ---
 
@@ -58,4 +57,3 @@ app.add_middleware(
 app.include_router(comic_router)
 app.include_router(archive_router)
 app.include_router(library_router)
-app.include_router(user_router)
