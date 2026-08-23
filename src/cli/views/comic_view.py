@@ -40,23 +40,19 @@ def render_comic_list(title: str, comics: List[ComicSearchResult]):
     table = Table(title=title, border_style="white")
     table.add_column("ID", style="magenta")
     table.add_column("Title", style="green")
-    table.add_column("Tags", style="yellow")
     
     for c in comics:
-        tags_str = ", ".join(c.tags) if getattr(c, 'tags', None) else ""
-        table.add_row(c.id, c.title, tags_str)
+        table.add_row(c.id, c.title)
 
     rprint(table)
 
 def render_explore_list(title: str, comics: List[ComicExploreResult]):
     table = Table(title=title, border_style="white")
-    table.add_column("ID", style="magenta")
+    table.add_column("ID", style="cyan")
     table.add_column("Title", style="green")
-    table.add_column("Tags", style="yellow")
-    
-    for c in comics:
-        tags_str = ", ".join(c.tags) if c.tags else ""
-        table.add_row(c.id, c.title, tags_str)
+
+    for comic in comics:
+        table.add_row(comic.id, comic.title)
 
     rprint(table)
 

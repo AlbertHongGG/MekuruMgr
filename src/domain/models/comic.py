@@ -25,7 +25,6 @@ class ComicExploreResult(BaseModel):
     provider_id: str
     title: str
     cover_url: str
-    tags: List[str] = Field(default_factory=list)
 
 class ComicDetail(BaseModel):
     id: str
