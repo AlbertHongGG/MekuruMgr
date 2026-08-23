@@ -99,7 +99,7 @@ class WebtoonProvider(BaseComicProvider):
             comics.append(ComicSearchResult(
                 id=str(item.titleNo),
                 provider_id=self.provider_id,
-                title=item.searchTitle
+                title="..."
             ))
             
         return comics
