@@ -1,5 +1,6 @@
 import httpx
 import logging
+import datetime
 from typing import Dict, Any, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -41,6 +42,9 @@ class CopymangaHttpClient:
 
         # Merge headers
         headers = dict(DEFAULT_HEADERS)
+        
+        # Override dt with today's date in YYYY.MM.DD format
+        headers["dt"] = datetime.datetime.now().strftime("%Y.%m.%d")
         
         # Override with dynamic signature headers
         auth_headers = self.signer.get_auth_headers()

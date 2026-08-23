@@ -7,7 +7,6 @@ DEFAULT_HEADERS = {
     "source": "copyApp",
     "deviceinfo": "SM-A315G-a31",
     "webp": "1",
-    "dt": "2026.08.24",
     "authorization": "Token",
     "content-type": "application/x-www-form-urlencoded",
     "versioncode": "83",
