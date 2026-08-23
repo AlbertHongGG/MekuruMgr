@@ -81,11 +81,11 @@ class CopymangaProvider(BaseComicProvider):
 
     def get_chapter_images(self, comic_id: str, chapter_id: str) -> List[PageImage]:
         res = self.api.get_chapter_images(path_word=comic_id, chapter_uuid=chapter_id)
-        if not res.results or not res.results.images:
+        if not res.results or not res.results.chapter or not res.results.chapter.contents:
             return []
             
         images = []
-        for idx, img in enumerate(res.results.images):
+        for idx, img in enumerate(res.results.chapter.contents):
             # Some Copymanga image endpoints also use "words" to descramble but
             # standard viewing might just need the url.
             images.append(PageImage(

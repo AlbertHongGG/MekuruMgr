@@ -62,7 +62,9 @@ class ChapterListResult(BaseModel):
 class ImageItem(BaseModel):
     url: str
 
-class ChapterImageResult(BaseModel):
-    chapter: Optional[Dict[str, Any]] = None
-    images: List[ImageItem] = []
+class ChapterImageInner(BaseModel):
+    contents: List[ImageItem] = []
     words: List[int] = []
+
+class ChapterImageResult(BaseModel):
+    chapter: Optional[ChapterImageInner] = None
