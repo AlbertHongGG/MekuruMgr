@@ -1,5 +1,12 @@
 import typer
 import logging
+import sys
+
+# Fix Windows console UnicodeEncodeError for Chinese characters
+if sys.platform.startswith('win'):
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from src.core.logger import setup_logging
 from src.core.registry import registry
 from src.cli.commands.comic_cmd import comic_app

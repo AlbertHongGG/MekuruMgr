@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
 class PageImage(BaseModel):
@@ -16,6 +16,9 @@ class Chapter(BaseModel):
 class ComicSearchResult(BaseModel):
     id: str
     provider_id: str
+    title: str = ""
+    cover_url: str = ""
+    tags: List[str] = Field(default_factory=list)
 
 class ComicExploreResult(BaseModel):
     id: str

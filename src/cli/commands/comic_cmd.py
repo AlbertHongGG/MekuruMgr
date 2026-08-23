@@ -59,16 +59,9 @@ def search_comic(
 
     with console.status(f"Searching for '{keyword}' from {provider_id}...", spinner="dots"):
         search_results = manager.search_comics(keyword, page, page_size)
-        comics = []
-        for res in search_results:
-            try:
-                detail = manager.fetch_comic_detail(res.id)
-                comics.append(detail)
-            except Exception as e:
-                console.print(f"[yellow]Warning:[/] Failed to fetch detail for {res.id}: {e}")
         
     title = f"[{manager.provider.provider_name}] Search Results for '{keyword}'"
-    comic_view.render_comic_list(title, comics)
+    comic_view.render_comic_list(title, search_results)
 
 @comic_app.command(name="list-images")
 def list_images(

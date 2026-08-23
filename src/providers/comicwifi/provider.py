@@ -80,7 +80,10 @@ class ComicWifiProvider(BaseComicProvider):
             return [
                 ComicSearchResult(
                     id=item.module_item.id,
-                    provider_id=self.provider_id
+                    provider_id=self.provider_id,
+                    title=item.module_item.name,
+                    cover_url=item.module_item.cover,
+                    tags=item.module_item.tags or []
                 )
                 for item in items
             ]
