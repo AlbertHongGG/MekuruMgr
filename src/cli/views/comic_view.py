@@ -50,9 +50,11 @@ def render_explore_list(title: str, comics: List[ComicExploreResult]):
     table = Table(title=title, border_style="white")
     table.add_column("ID", style="cyan")
     table.add_column("Title", style="green")
+    table.add_column("Tags", style="yellow")
 
     for comic in comics:
-        table.add_row(comic.id, comic.title)
+        tags_str = ", ".join(comic.tags) if comic.tags else ""
+        table.add_row(comic.id, comic.title, tags_str)
 
     rprint(table)
 

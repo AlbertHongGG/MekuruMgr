@@ -104,13 +104,11 @@ class CopymangaProvider(BaseComicProvider):
             
         comics = []
         for item in res.results.list:
-            authors = [a.name for a in item.author] if item.author else []
             comics.append(ComicSearchResult(
                 id=item.path_word,
                 provider_id=self.provider_id,
                 title=item.name,
-                cover_url=item.cover,
-                tags=authors
+                cover_url=item.cover
             ))
             
         return comics

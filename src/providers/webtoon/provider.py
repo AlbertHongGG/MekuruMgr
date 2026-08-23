@@ -99,8 +99,7 @@ class WebtoonProvider(BaseComicProvider):
             comics.append(ComicSearchResult(
                 id=str(item.titleNo),
                 provider_id=self.provider_id,
-                title=item.searchTitle,
-                tags=[item.representGenre] if hasattr(item, 'representGenre') and item.representGenre else []
+                title=item.searchTitle
             ))
             
         return comics
