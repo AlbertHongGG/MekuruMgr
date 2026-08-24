@@ -8,9 +8,9 @@ from src.application.comic_manager import ComicManager
 runner = CliRunner()
 
 PROVIDERS_TEST_DATA = [
-    ("webtoon", "骷髏"),
+    ("webtoon", "奶烙陷阱"),
     ("comicwifi", "骷髏"),
-    ("copymanga", "骷髏"),
+    ("copymanga", "最強暗殺者"),
 ]
 
 @pytest.fixture(scope="session", autouse=True)

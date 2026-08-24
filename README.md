@@ -240,3 +240,8 @@ Once a comic is archived, its images are securely and efficiently streamed (usin
 GET /api/v1/library/media/{provider_id}/{comic_id}/cover.jpg
 GET /api/v1/library/media/{provider_id}/{comic_id}/{chapter_id}/000.jpg
 ```
+
+# Test
+```text
+uv run pytest tests/
+```
