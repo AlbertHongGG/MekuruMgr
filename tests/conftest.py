@@ -33,6 +33,8 @@ def setup_api_dumper():
                 provider = "webtoon"
             elif "comicwifi" in url or "ciyixiu" in url or "cxxapi" in url:
                 provider = "comicwifi"
+            elif "mseeowpm" in url or "manwa" in url:
+                provider = "manwa"
                 
             dump_dir = os.path.join(output_dir, provider)
             os.makedirs(dump_dir, exist_ok=True)

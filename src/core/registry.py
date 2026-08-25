@@ -38,6 +38,7 @@ class ProviderRegistry:
         # Get the path to src/providers
         providers_dir = Path(__file__).parent.parent / "providers"
         
+
         if not providers_dir.exists() or not providers_dir.is_dir():
             return
             
