@@ -1,7 +1,7 @@
 from typing import List
 from pydantic import TypeAdapter
 
-from src.providers.comicwifi.http_client import BaseHttpClient
+from src.providers.comicwifi.http_client import ComicWifiHttpClient
 from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest, ComicExploreRequest
 from src.providers.comicwifi.models.responses import ComicDetail, ChapterList, ChapterReadData, SearchResultItem
 
@@ -10,7 +10,7 @@ class ComicApiClient:
     Strongly-typed API client for the Comic API.
     Transforms business domain requests into HTTP calls and validates responses using Pydantic.
     """
-    def __init__(self, http_client: BaseHttpClient):
+    def __init__(self, http_client: ComicWifiHttpClient):
         self._http = http_client
 
     def get_comic_detail(self, req: ComicDetailRequest) -> ComicDetail:

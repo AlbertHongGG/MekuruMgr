@@ -6,9 +6,9 @@ from src.domain.models import ComicSearchResult, ComicDetail, Chapter, PageImage
 from src.core.registry import registry
 from src.core.constants import BuiltinProvider
 
-from src.providers.comicwifi.http_client import BaseHttpClient
+from src.providers.comicwifi.http_client import ComicWifiHttpClient
 from src.providers.comicwifi.api import ComicApiClient
-from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest
+from src.providers.comicwifi.models.requests import ComicDetailRequest, ChapterListRequest, ChapterImagesRequest, ComicSearchRequest, ComicExploreRequest
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class ComicWifiProvider(BaseComicProvider):
     """
     
     def __init__(self):
-        self._http = BaseHttpClient()
+        self._http = ComicWifiHttpClient()
         self._api = ComicApiClient(self._http)
 
     @property

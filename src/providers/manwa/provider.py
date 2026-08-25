@@ -78,7 +78,7 @@ class ManwaProvider(BaseComicProvider):
             cover_url=parsed.picx,
             author=author,
             description=parsed.text,
-            status=parsed.state,
+            update_status=parsed.state,
             tags=tags
         )
 
@@ -95,7 +95,8 @@ class ManwaProvider(BaseComicProvider):
                 provider_id=self.provider_id,
                 comic_id=comic_id,
                 title=ch.name,
-                order=ch.sort if ch.sort is not None else 0
+                order=ch.sort if ch.sort is not None else 0,
+                publish_time=ch.addtime
             ))
             
         return chapters

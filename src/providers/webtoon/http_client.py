@@ -4,24 +4,24 @@ from typing import Dict, Any, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.domain.exceptions import NetworkError, ApiLogicError
+from src.core.http_client import BaseHttpClient
 from .config import BASE_URL
 from .signer import WebtoonUrlSigner
 
 logger = logging.getLogger(__name__)
 
-class WebtoonHttpClient:
+class WebtoonHttpClient(BaseHttpClient):
     """
     HTTP Client wrapper for Webtoon.
     Handles session management, automatic URL signing, and error catching.
     """
     def __init__(self):
-        self.base_url = BASE_URL
-        self.signer = WebtoonUrlSigner()
-        self.client = httpx.Client(
-            base_url=self.base_url,
-            timeout=httpx.Timeout(15.0),
+        super().__init__(
+            provider_id="webtoon",
+            base_url=BASE_URL,
             verify=False
         )
+        self.signer = WebtoonUrlSigner()
 
     def close(self):
         self.client.close()
@@ -62,5 +62,8 @@ class WebtoonHttpClient:
         except ValueError as e:
             logger.error(f"invalid_json_response url={signed_url} text={response.text}")
             raise NetworkError("Failed to parse JSON response") from e
+
+        # Trigger hook with parsed JSON
+        self.notify_hooks(endpoint, res_json)
 
         return res_json

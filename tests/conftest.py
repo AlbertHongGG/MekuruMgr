@@ -2,41 +2,20 @@ import pytest
 import os
 import json
 import time
-import httpx
 from urllib.parse import urlparse
+from src.core.registry import registry
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_api_dumper():
     """
-    Globally intercepts httpx API calls during the test session and 
-    dumps the JSON responses into the test_outputs directory.
+    Globally attaches a JSON dumper hook to all registered providers' HTTP clients.
+    This intercepts at the application layer, ensuring we save fully decrypted JSONs.
     """
-    _orig_client_send = httpx.Client.send
-    
-    # Define dump directory base
     output_dir = os.path.join(os.getcwd(), "test_outputs")
 
-    def _dump_json(request, response):
+    def _dump_json_hook(provider_id: str, url: str, data: dict):
         try:
-            # Only intercept JSON or text responses
-            content_type = response.headers.get("Content-Type", "")
-            if "application/json" not in content_type and "text/plain" not in content_type:
-                return
-
-            url = str(request.url)
-            
-            # Determine provider by heuristic based on URL
-            provider = "unknown"
-            if "copy202601.com" in url:
-                provider = "copymanga"
-            elif "webtoon" in url or "naver.com" in url:
-                provider = "webtoon"
-            elif "comicwifi" in url or "ciyixiu" in url or "cxxapi" in url:
-                provider = "comicwifi"
-            elif "mseeowpm" in url or "manwa" in url:
-                provider = "manwa"
-                
-            dump_dir = os.path.join(output_dir, provider)
+            dump_dir = os.path.join(output_dir, provider_id)
             os.makedirs(dump_dir, exist_ok=True)
             
             parsed = urlparse(url)
@@ -52,25 +31,28 @@ def setup_api_dumper():
                 
             filepath = os.path.join(dump_dir, filename)
             
-            response.read()
-            try:
-                data = response.json()
-            except:
-                return
-                
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Failed to dump json: {e}")
 
-    def patched_send(self, request, *args, **kwargs):
-        response = _orig_client_send(self, request, *args, **kwargs)
-        _dump_json(request, response)
-        return response
-
-    httpx.Client.send = patched_send
+    registry.load_all_providers()
     
+    def attach_hooks_recursive(obj, hook, visited=None):
+        if visited is None:
+            visited = set()
+        if id(obj) in visited:
+            return
+        visited.add(id(obj))
+        
+        if hasattr(obj, "add_hook"):
+            obj.add_hook(hook)
+            
+        if hasattr(obj, "__dict__"):
+            for val in obj.__dict__.values():
+                attach_hooks_recursive(val, hook, visited)
+
+    for p_id, provider in registry.get_all().items():
+        attach_hooks_recursive(provider, _dump_json_hook)
+            
     yield
-    
-    # Restore after tests
-    httpx.Client.send = _orig_client_send

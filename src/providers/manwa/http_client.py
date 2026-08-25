@@ -4,21 +4,21 @@ from typing import Dict, Any, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.domain.exceptions import NetworkError, ApiLogicError
+from src.core.http_client import BaseHttpClient
 from .config import BASE_URL
 from .crypto import ManwaCrypto
 
 logger = logging.getLogger(__name__)
 
-class ManwaHttpClient:
+class ManwaHttpClient(BaseHttpClient):
     """
     HTTP Client wrapper for Manwa.
     Handles dynamic headers, AES decryption, and retries.
     """
     def __init__(self):
-        self.base_url = BASE_URL
-        self.client = httpx.Client(
-            base_url=self.base_url,
-            timeout=httpx.Timeout(15.0),
+        super().__init__(
+            provider_id="manwa",
+            base_url=BASE_URL,
             verify=False
         )
 
@@ -59,4 +59,9 @@ class ManwaHttpClient:
             logger.error(f"manwa_api_error code={code} msg={msg}")
             raise ApiLogicError(msg, code)
             
-        return res_json.get("data", {})
+        data_payload = res_json.get("data", {})
+        
+        # Trigger hooks with decrypted data
+        self.notify_hooks(endpoint, res_json)
+        
+        return data_payload

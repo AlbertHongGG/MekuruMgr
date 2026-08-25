@@ -5,24 +5,24 @@ from typing import Dict, Any, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.domain.exceptions import NetworkError
+from src.core.http_client import BaseHttpClient
 from .config import BASE_URL, DEFAULT_HEADERS
 from .signer import CopymangaSigner
 
 logger = logging.getLogger(__name__)
 
-class CopymangaHttpClient:
+class CopymangaHttpClient(BaseHttpClient):
     """
     HTTP Client wrapper for Copymanga.
     Handles headers, error catching, and retries.
     """
     def __init__(self):
-        self.base_url = BASE_URL
-        self.signer = CopymangaSigner()
-        self.client = httpx.Client(
-            base_url=self.base_url,
-            timeout=httpx.Timeout(15.0),
+        super().__init__(
+            provider_id="copymanga",
+            base_url=BASE_URL,
             verify=False
         )
+        self.signer = CopymangaSigner()
 
     def close(self):
         self.client.close()
@@ -72,4 +72,6 @@ class CopymangaHttpClient:
             logger.error(f"copymanga_api_error code={res_json.get('code')} msg={error_msg}")
             raise NetworkError(f"Backend returned error: {error_msg}")
              
+        self.notify_hooks(endpoint, res_json)
+        
         return res_json

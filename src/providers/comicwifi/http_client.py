@@ -4,25 +4,26 @@ from typing import Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.domain.exceptions import NetworkError, ApiLogicError
+from src.core.http_client import BaseHttpClient
 from src.providers.comicwifi.auth import ComicWifiAuth
 from src.providers.comicwifi.config import settings
 
 logger = logging.getLogger(__name__)
 
-class BaseHttpClient:
+class ComicWifiHttpClient(BaseHttpClient):
     """
     Core HTTP Client wrapper.
     Handles session management, auth injection, and error catching.
     """
     def __init__(self):
-        self.base_url = settings.base_url
-        self.auth = ComicWifiAuth()
-        self.client = httpx.Client(
-            base_url=self.base_url,
-            headers=settings.http_headers,
-            auth=self.auth,
-            timeout=httpx.Timeout(15.0)
+        super().__init__(
+            provider_id="comicwifi",
+            base_url=settings.base_url,
+            verify=True
         )
+        self.auth = ComicWifiAuth()
+        self.client.headers.update(settings.http_headers)
+        self.client.auth = self.auth
 
     def close(self):
         self.client.close()
@@ -61,5 +62,8 @@ class BaseHttpClient:
             msg = res_json.get("message", "Unknown error")
             logger.warning("api_logic_error", endpoint=endpoint, code=code, message=msg)
             raise ApiLogicError(msg, code)
+            
+        data_payload = res_json.get("data", {})
+        self.notify_hooks(endpoint, res_json)
 
-        return res_json.get("data", {})
+        return data_payload

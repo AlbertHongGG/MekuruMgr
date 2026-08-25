@@ -20,6 +20,7 @@ class ManwaChapterItem(BaseModel):
     id: int
     name: str
     sort: int = 0
+    addtime: str = ""
     # other fields are present but we only need these
 
 class ManwaDetailData(BaseModel):
