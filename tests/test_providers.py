@@ -12,6 +12,7 @@ PROVIDERS_TEST_DATA = [
     ("comicwifi", "骷髏"),
     ("copymanga", "最強暗殺者"),
     ("manwa", "骷髏"),
+    ("guazi", "骷髅"),
 ]
 
 @pytest.fixture(scope="session", autouse=True)
