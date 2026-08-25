@@ -1,5 +1,6 @@
 import pytest
 import os
+import shutil
 from typer.testing import CliRunner
 from cli import app
 from src.core.registry import registry
@@ -17,6 +18,8 @@ PROVIDERS_TEST_DATA = [
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_output_dir():
+    if os.path.exists("test_outputs"):
+        shutil.rmtree("test_outputs", ignore_errors=True)
     os.makedirs("test_outputs", exist_ok=True)
     registry.load_all_providers()
 
