@@ -68,3 +68,14 @@ class ManwaCrypto:
                 continue
                 
         raise ValueError("Decryption failed: Could not match key seed for payload.")
+
+    @classmethod
+    def decrypt_image(cls, encrypted_bytes: bytes) -> bytes:
+        """
+        Decrypts downloaded comic image binary data using AES-128-CBC.
+        """
+        key = b"my2ecret782ecret"
+        iv = b"my2ecret782ecret"
+        
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return unpad(cipher.decrypt(encrypted_bytes), AES.block_size)

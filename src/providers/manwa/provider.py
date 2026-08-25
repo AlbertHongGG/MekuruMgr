@@ -122,8 +122,22 @@ class ManwaProvider(BaseComicProvider):
         }
         response = await client.get(url, headers=headers, timeout=30.0)
         response.raise_for_status()
-        content_type = response.headers.get('content-type', '')
-        return response.content, content_type
+        
+        # Decrypt image
+        try:
+            from .crypto import ManwaCrypto
+            decrypted_bytes = ManwaCrypto.decrypt_image(response.content)
+            
+            # Auto detect content type from magic number since encrypted payload usually gives octet-stream
+            content_type = response.headers.get('content-type', '')
+            if decrypted_bytes.startswith(b'RIFF') and b'WEBP' in decrypted_bytes[:16]:
+                content_type = 'image/webp'
+                
+            return decrypted_bytes, content_type
+        except Exception as e:
+            logger.error(f"Failed to decrypt Manwa image {url}: {e}")
+            # Fallback to returning raw bytes if decryption fails
+            return response.content, response.headers.get('content-type', '')
 
 from src.core.registry import registry
 registry.register(ManwaProvider)
