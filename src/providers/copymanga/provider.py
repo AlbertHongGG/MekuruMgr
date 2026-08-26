@@ -17,6 +17,10 @@ class CopymangaProvider(BaseComicProvider):
         return "copymanga"
 
     @property
+    def aliases(self) -> List[str]:
+        return ["copymg"]
+
+    @property
     def provider_name(self) -> str:
         return "Copymanga"
 

@@ -28,7 +28,11 @@ class ComicWifiProvider(BaseComicProvider):
 
     @property
     def provider_id(self) -> str:
-        return BuiltinProvider.COMICWIFI
+        return BuiltinProvider.COMICWIFI.value
+
+    @property
+    def aliases(self) -> List[str]:
+        return ["comicwf"]
 
     @property
     def provider_name(self) -> str:

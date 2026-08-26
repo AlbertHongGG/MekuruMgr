@@ -14,6 +14,11 @@ class BaseComicProvider(ABC):
         """A unique identifier for this provider (e.g., 'comicwifi')."""
         pass
 
+    @property
+    def aliases(self) -> List[str]:
+        """Alternative identifiers for this provider (e.g., ['comicwf']). Defaults to empty list."""
+        return []
+
     def add_api_hook(self, hook: Any) -> None:
         """
         Add an interceptor hook to the underlying HTTP clients.

@@ -132,11 +132,19 @@ def mock_library(current_test_info):
     import asyncio
     
     # 使用當前執行的 provider 和 comic_id 來建立 mock，確保一致性
-    provider_id = current_test_info["provider"]
+    original_provider_id = current_test_info["provider"]
+    provider_id = original_provider_id
     comic_id = current_test_info["comic_id"]
     
     if provider_id == "unknown_provider":
         provider_id = "test_provider"
+        original_provider_id = "test_provider"
+    else:
+        try:
+            provider_id = registry.resolve_id(provider_id)
+        except Exception:
+            pass
+            
     if comic_id == "unknown_comic":
         comic_id = "test_comic"
     
@@ -178,7 +186,7 @@ def mock_library(current_test_info):
     asyncio.run(media_storage.save_image(provider_id, comic_id, "ch1", 1, b"fake_img1", "image/jpeg"))
     asyncio.run(media_storage.save_image(provider_id, comic_id, "ch1", 2, b"fake_img2", "image/jpeg"))
     
-    yield {"provider_id": provider_id, "comic_id": comic_id, "chapter_id": "ch1"}
+    yield {"provider_id": original_provider_id, "comic_id": comic_id, "chapter_id": "ch1"}
     
     provider.get_library_storage().delete_comic(provider_id, comic_id)
     provider.get_task_storage().delete_task(task.task_id)

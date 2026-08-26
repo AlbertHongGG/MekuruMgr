@@ -4,6 +4,7 @@ from typing import List
 from src.storage.factory import StorageFactory
 from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
 from src.application.queue_service import DownloadQueueService
+from src.server.deps import resolve_provider_id
 
 archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
@@ -23,7 +24,7 @@ def get_active_queue(queue_service: DownloadQueueService = Depends(get_queue_ser
     return tasks
 
 @archive_router.get("/{provider_id}/{comic_id}", response_model=LibraryComic)
-def get_archived_comic(provider_id: str, comic_id: str):
+def get_archived_comic(comic_id: str, provider_id: str = Depends(resolve_provider_id)):
     """Get metadata for a specific tracked comic."""
     provider = StorageFactory.get_provider()
     comic = provider.get_library_storage().get_comic(provider_id, comic_id)
@@ -33,13 +34,11 @@ def get_archived_comic(provider_id: str, comic_id: str):
 
 @archive_router.post("/{provider_id}/{comic_id}/track")
 async def track_comic(
-    provider_id: str, 
     comic_id: str, 
+    provider_id: str = Depends(resolve_provider_id),
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Add a comic to the tracking library without downloading chapters."""
-    # We can just submit it but not start it? Wait, track only saves metadata.
-    # The QueueService has _track_comic_sync. Let's make a public method or just call it directly.
     try:
         archived = await queue_service.track_comic(provider_id, comic_id)
         return {"message": f"Successfully tracked comic {comic_id}", "data": archived}
@@ -48,8 +47,8 @@ async def track_comic(
 
 @archive_router.post("/{provider_id}/{comic_id}/sync", response_model=DownloadTask)
 async def sync_comic(
-    provider_id: str, 
     comic_id: str, 
+    provider_id: str = Depends(resolve_provider_id),
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Perform an incremental sync in the background by submitting to queue."""
@@ -61,8 +60,8 @@ async def sync_comic(
 
 @archive_router.post("/{provider_id}/{comic_id}/pause")
 async def pause_comic(
-    provider_id: str, 
     comic_id: str, 
+    provider_id: str = Depends(resolve_provider_id),
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Pause an active sync task."""
@@ -74,8 +73,8 @@ async def pause_comic(
 
 @archive_router.post("/{provider_id}/{comic_id}/resume")
 async def resume_comic(
-    provider_id: str, 
     comic_id: str, 
+    provider_id: str = Depends(resolve_provider_id),
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Resume a paused sync task."""
@@ -87,8 +86,8 @@ async def resume_comic(
 
 @archive_router.delete("/{provider_id}/{comic_id}/cancel")
 async def cancel_sync_comic(
-    provider_id: str, 
     comic_id: str, 
+    provider_id: str = Depends(resolve_provider_id),
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Cancel a sync task."""
@@ -100,8 +99,8 @@ async def cancel_sync_comic(
 
 @archive_router.delete("/{provider_id}/{comic_id}")
 def delete_archived_comic(
-    provider_id: str, 
     comic_id: str,
+    provider_id: str = Depends(resolve_provider_id), 
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Delete an archived comic and all its local files."""
@@ -119,8 +118,8 @@ def delete_archived_comic(
 
 @archive_router.get("/{provider_id}/{comic_id}/progress")
 def get_sync_progress(
-    provider_id: str, 
     comic_id: str,
+    provider_id: str = Depends(resolve_provider_id), 
     queue_service: DownloadQueueService = Depends(get_queue_service)
 ):
     """Get real-time detailed sync progress for a comic."""

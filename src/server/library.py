@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from typing import List
 
@@ -6,6 +6,7 @@ from src.application.library_service import LibraryService
 from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem
 from src.domain.exceptions import AppBaseError
 from src.storage.factory import StorageFactory
+from src.server.deps import resolve_provider_id
 
 library_router = APIRouter(prefix="/api/v1/library", tags=["Library"])
 
@@ -53,7 +54,7 @@ def explore_library_comics(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}", response_model=LocalComicDetail)
-def get_library_comic_detail(provider_id: str, comic_id: str, request: Request):
+def get_library_comic_detail(comic_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
     """Get comic details and only the COMPLETED chapters."""
     try:
         service = get_service(request)
@@ -64,7 +65,7 @@ def get_library_comic_detail(provider_id: str, comic_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}/chapters", response_model=List[LocalChapterItem])
-def get_library_comic_chapters(provider_id: str, comic_id: str, request: Request):
+def get_library_comic_chapters(comic_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
     """Get only the COMPLETED chapters for a comic."""
     try:
         service = get_service(request)
@@ -75,7 +76,7 @@ def get_library_comic_chapters(provider_id: str, comic_id: str, request: Request
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}/chapters/{chapter_id}", response_model=LocalChapterImages)
-def get_library_chapter_images(provider_id: str, comic_id: str, chapter_id: str, request: Request):
+def get_library_chapter_images(comic_id: str, chapter_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
     """Get the full image URLs for a fully downloaded chapter."""
     try:
         service = get_service(request)
