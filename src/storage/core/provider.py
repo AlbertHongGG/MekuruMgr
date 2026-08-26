@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.storage.core.archive_interface import IArchiveStorage
+from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 
 class IStorageProvider(ABC):
     """
@@ -8,5 +8,13 @@ class IStorageProvider(ABC):
     to return its specific repositories.
     """
     @abstractmethod
-    def get_archive_storage(self) -> IArchiveStorage:
+    def get_library_storage(self) -> ILibraryStorage:
+        pass
+
+    @abstractmethod
+    def get_task_storage(self) -> ITaskStorage:
+        pass
+        
+    @abstractmethod
+    def get_media_storage(self) -> IMediaStorage:
         pass

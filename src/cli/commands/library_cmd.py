@@ -2,7 +2,7 @@ import typer
 
 from src.core.config import app_settings
 from src.application.library_service import LibraryService
-from src.storage.factory import StorageFactory, StorageEngine
+from src.storage.factory import StorageFactory
 from src.domain.exceptions import AppBaseError
 from src.cli.views import library_view
 from rich import print as rprint
@@ -10,10 +10,16 @@ from rich import print as rprint
 library_app = typer.Typer(help="Read and access locally downloaded comics")
 
 def get_cli_service() -> LibraryService:
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
-    storage = provider.get_archive_storage()
-    base_file_url = f"file:///{storage.data_dir.absolute().as_posix()}/"
-    return LibraryService(storage=storage, base_media_url=base_file_url)
+    provider = StorageFactory.get_provider()
+    media_storage = provider.get_media_storage()
+    # Assume media_storage has a data_dir attribute (true for LocalMediaStorage)
+    base_file_url = f"file:///{media_storage.data_dir.absolute().as_posix()}/"
+    return LibraryService(
+        library_storage=provider.get_library_storage(),
+        task_storage=provider.get_task_storage(),
+        media_storage=media_storage,
+        base_media_url=base_file_url
+    )
 
 @library_app.command(name="explore")
 def explore_library():

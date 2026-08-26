@@ -1,13 +1,13 @@
 import urllib.parse
 from typing import List
 
-from src.storage.core.archive_interface import IArchiveStorage
+from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 from src.domain.models import (
     LocalComicItem, 
     LocalComicDetail, 
     LocalChapterItem, 
     LocalChapterImages,
-    DownloadStatus
+    TaskStatus
 )
 from src.domain.exceptions import AppBaseError
 
@@ -16,24 +16,31 @@ class LibraryService:
     Read-only service for providing clean, consumable comic data.
     Filters out incomplete chapters and transforms internal paths to CDN URLs.
     """
-    def __init__(self, storage: IArchiveStorage, base_media_url: str = "/media/"):
-        self.storage = storage
+    def __init__(self, library_storage: ILibraryStorage, task_storage: ITaskStorage, media_storage: IMediaStorage, base_media_url: str = "/media/"):
+        self.library_storage = library_storage
+        self.task_storage = task_storage
+        self.media_storage = media_storage
         self.base_media_url = base_media_url.rstrip("/") + "/"
 
     def _build_url(self, path: str) -> str:
         if not path:
             return ""
-        # Ensure proper URL encoding for paths (but keep slashes intact)
         parts = path.split('/')
         encoded_parts = [urllib.parse.quote(p) for p in parts]
         return self.base_media_url + "/".join(encoded_parts)
+        
+    def _get_completed_chapters_count(self, provider_id: str, comic_id: str) -> int:
+        task = self.task_storage.get_task(f"{provider_id}::{comic_id}")
+        if task:
+            return task.completed_chapters
+        return 0
 
     def list_comics(self) -> List[LocalComicItem]:
         """Get a clean list of all locally tracked comics."""
-        archived_comics = self.storage.list_comics()
+        archived_comics = self.library_storage.list_comics()
         items = []
         for c in archived_comics:
-            completed_count = sum(1 for ch in c.chapters.values() if ch.status == DownloadStatus.COMPLETED)
+            completed_count = self._get_completed_chapters_count(c.provider_id, c.comic_id)
             items.append(LocalComicItem(
                 provider_id=c.provider_id,
                 comic_id=c.comic_id,
@@ -48,10 +55,10 @@ class LibraryService:
         if not keyword or not keyword.strip():
             return []
             
-        archived_comics = self.storage.search_comics(keyword.strip())
+        archived_comics = self.library_storage.search_comics(keyword.strip())
         items = []
         for c in archived_comics:
-            completed_count = sum(1 for ch in c.chapters.values() if ch.status == DownloadStatus.COMPLETED)
+            completed_count = self._get_completed_chapters_count(c.provider_id, c.comic_id)
             items.append(LocalComicItem(
                 provider_id=c.provider_id,
                 comic_id=c.comic_id,
@@ -63,7 +70,7 @@ class LibraryService:
 
     def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComicDetail:
         """Get comic details without chapter array."""
-        c = self.storage.get_comic(provider_id, comic_id)
+        c = self.library_storage.get_comic(provider_id, comic_id)
         if not c:
             raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
 
@@ -79,32 +86,39 @@ class LibraryService:
 
     def get_comic_chapters(self, provider_id: str, comic_id: str) -> List[LocalChapterItem]:
         """Get only the COMPLETED chapters for a comic."""
-        c = self.storage.get_comic(provider_id, comic_id)
+        c = self.library_storage.get_comic(provider_id, comic_id)
         if not c:
             raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
 
+        task = self.task_storage.get_task(f"{provider_id}::{comic_id}")
         completed_chapters = []
-        for ch in c.chapters.values():
-            if ch.status == DownloadStatus.COMPLETED:
-                completed_chapters.append(LocalChapterItem(
-                    chapter_id=ch.chapter_id,
-                    title=ch.title,
-                    page_count=ch.page_count
-                ))
+        
+        if task:
+            for ch in task.chapters.values():
+                if ch.status == TaskStatus.COMPLETED:
+                    completed_chapters.append(LocalChapterItem(
+                        chapter_id=ch.chapter_id,
+                        title=ch.title,
+                        page_count=ch.total_pages
+                    ))
         return completed_chapters
 
     def get_chapter_images(self, provider_id: str, comic_id: str, chapter_id: str) -> LocalChapterImages:
         """Get a list of full CDN image URLs for a specific chapter."""
-        c = self.storage.get_comic(provider_id, comic_id)
+        c = self.library_storage.get_comic(provider_id, comic_id)
         if not c:
             raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
             
-        ch = c.chapters.get(chapter_id)
-        if not ch or ch.status != DownloadStatus.COMPLETED:
+        task = self.task_storage.get_task(f"{provider_id}::{comic_id}")
+        if not task:
+            raise AppBaseError(f"No task found for comic {comic_id}.")
+            
+        ch = task.chapters.get(chapter_id)
+        if not ch or ch.status != TaskStatus.COMPLETED:
             raise AppBaseError(f"Chapter {chapter_id} is not fully downloaded or doesn't exist.")
 
         # Ask media storage for the relative paths
-        relative_paths = self.storage.get_chapter_images(provider_id, comic_id, chapter_id)
+        relative_paths = self.media_storage.get_chapter_images(provider_id, comic_id, chapter_id)
         if not relative_paths:
             raise AppBaseError(f"Physical images for chapter {chapter_id} not found.")
 

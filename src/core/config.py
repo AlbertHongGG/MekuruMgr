@@ -20,5 +20,8 @@ class AppConfig(BaseSettings):
     
     # Environment
     debug: bool = Field(default=False)
+    
+    # Storage
+    storage_engine: str = Field(default="json")
 
 app_settings = AppConfig()

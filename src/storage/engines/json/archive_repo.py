@@ -1,95 +1,79 @@
 import json
 import logging
-import threading
 import aiofiles
 import mimetypes
 import shutil
 from pathlib import Path
 from typing import Dict, Optional, List, Any
 from pydantic import TypeAdapter
+from filelock import FileLock
 
-from src.domain.models import ArchivedComic, DownloadStatus, ArchivedChapter
-from src.storage.core.archive_interface import IArchiveStorage
+from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
+from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 
 logger = logging.getLogger(__name__)
 
-class LocalJsonStorage(IArchiveStorage):
-    """
-    Local JSON + File System implementation of IArchiveStorage.
-    Completely encapsulates all path, mkdir, glob, and temporary file logic.
-    """
+class JsonLibraryStorage(ILibraryStorage):
     def __init__(self, db_path: str = "data/library.json"):
         self.db_path = Path(db_path)
-        self.data_dir = self.db_path.parent
-        self._lock = threading.RLock()
-        self._cache: Dict[str, ArchivedComic] = {}
-        self._load_db()
+        self.lock_path = self.db_path.with_suffix(".lock")
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._ta = TypeAdapter(Dict[str, LibraryComic])
 
-    # --- Private Metadata Helpers ---
-    def _load_db(self):
-        with self._lock:
-            if not self.db_path.exists():
-                return
-            try:
-                with open(self.db_path, 'r', encoding='utf-8') as f:
-                    data = json.loads(f.read())
-                    
-                ta = TypeAdapter(Dict[str, ArchivedComic])
-                self._cache = ta.validate_python(data)
-                logger.info(f"Loaded [cyan]{len(self._cache)}[/] comics from JSON DB")
-            except Exception as e:
-                logger.error(f"[red]Failed to load library DB: {e}[/]")
-                self._cache = {}
+    def _read_db(self) -> Dict[str, LibraryComic]:
+        if not self.db_path.exists():
+            return {}
+        try:
+            with open(self.db_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return self._ta.validate_python(data)
+        except Exception as e:
+            logger.error(f"Failed to read library DB: {e}")
+            return {}
 
-    def _save_db(self):
-        with self._lock:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            # Atomic JSON write
-            temp_path = self.db_path.with_suffix('.tmp')
-            try:
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    data = {k: v.model_dump(mode='json') for k, v in self._cache.items()}
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                temp_path.replace(self.db_path)
-            except Exception as e:
-                logger.error(f"[red]Failed to save library DB: {e}[/]")
-                raise
+    def _write_db(self, data: Dict[str, LibraryComic]):
+        temp_path = self.db_path.with_suffix('.tmp')
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json_data = {k: v.model_dump(mode='json') for k, v in data.items()}
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            temp_path.replace(self.db_path)
+        except Exception as e:
+            logger.error(f"Failed to save library DB: {e}")
+            raise
 
-    # --- IArchiveStorage: Metadata ---
-    def get_comic(self, provider_id: str, comic_id: str) -> Optional[ArchivedComic]:
+    def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
         key = f"{provider_id}::{comic_id}"
-        with self._lock:
-            return self._cache.get(key)
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            return db.get(key)
 
-    def save_comic(self, comic: ArchivedComic) -> None:
+    def save_comic(self, comic: LibraryComic) -> None:
         key = f"{comic.provider_id}::{comic.comic_id}"
-        with self._lock:
-            self._cache[key] = comic
-            self._save_db()
-            logger.debug(f"Saved comic to DB: [green]{comic.title}[/] (ID: {comic.comic_id})")
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            db[key] = comic
+            self._write_db(db)
 
     def delete_comic(self, provider_id: str, comic_id: str) -> None:
         key = f"{provider_id}::{comic_id}"
-        with self._lock:
-            if key in self._cache:
-                del self._cache[key]
-            self._save_db()
-            
-        target_dir = self.data_dir / provider_id / comic_id
-        if target_dir.exists():
-            shutil.rmtree(target_dir, ignore_errors=True)
-            
-        logger.info(f"Deleted comic and media from DB: (Provider: [magenta]{provider_id}[/], ID: {comic_id})")
-            
-    def list_comics(self) -> List[ArchivedComic]:
-        with self._lock:
-            return list(self._cache.values())
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            if key in db:
+                del db[key]
+                self._write_db(db)
 
-    def search_comics(self, keyword: str) -> List[ArchivedComic]:
+    def list_comics(self) -> List[LibraryComic]:
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            return list(db.values())
+
+    def search_comics(self, keyword: str) -> List[LibraryComic]:
         keyword = keyword.lower()
         results = []
-        with self._lock:
-            for comic in self._cache.values():
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            for comic in db.values():
                 if (keyword in comic.title.lower() or 
                     keyword in comic.description.lower() or 
                     keyword in comic.comic_id.lower() or
@@ -98,7 +82,63 @@ class LocalJsonStorage(IArchiveStorage):
                     results.append(comic)
         return results
 
-    # --- IArchiveStorage: Media ---
+class JsonTaskStorage(ITaskStorage):
+    def __init__(self, db_path: str = "data/tasks.json"):
+        self.db_path = Path(db_path)
+        self.lock_path = self.db_path.with_suffix(".lock")
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._ta = TypeAdapter(Dict[str, DownloadTask])
+
+    def _read_db(self) -> Dict[str, DownloadTask]:
+        if not self.db_path.exists():
+            return {}
+        try:
+            with open(self.db_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return self._ta.validate_python(data)
+        except Exception as e:
+            logger.error(f"Failed to read tasks DB: {e}")
+            return {}
+
+    def _write_db(self, data: Dict[str, DownloadTask]):
+        temp_path = self.db_path.with_suffix('.tmp')
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json_data = {k: v.model_dump(mode='json') for k, v in data.items()}
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            temp_path.replace(self.db_path)
+        except Exception as e:
+            logger.error(f"Failed to save tasks DB: {e}")
+            raise
+
+    def get_task(self, task_id: str) -> Optional[DownloadTask]:
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            return db.get(task_id)
+
+    def save_task(self, task: DownloadTask) -> None:
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            db[task.task_id] = task
+            self._write_db(db)
+
+    def delete_task(self, task_id: str) -> None:
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            if task_id in db:
+                del db[task_id]
+                self._write_db(db)
+
+    def list_tasks(self) -> List[DownloadTask]:
+        with FileLock(self.lock_path):
+            db = self._read_db()
+            return list(db.values())
+
+class LocalMediaStorage(IMediaStorage):
+    def __init__(self, data_dir: str = "data"):
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+
     async def save_image(self, provider_id: str, comic_id: str, chapter_id: str, index: int, content: bytes, content_type: str) -> str:
         comic_dir = self.data_dir / provider_id / comic_id
         
@@ -115,13 +155,10 @@ class LocalJsonStorage(IArchiveStorage):
         
         dest_dir.mkdir(parents=True, exist_ok=True)
         
-        # Atomic Binary Write
         async with aiofiles.open(tmp_path, 'wb') as f:
             await f.write(content)
         
-        # Rename only when fully written and closed
         tmp_path.replace(dest_path)
-            
         return dest_path.name
 
     def get_chapter_images(self, provider_id: str, comic_id: str, chapter_id: str) -> List[str]:
@@ -129,7 +166,6 @@ class LocalJsonStorage(IArchiveStorage):
         if not chapter_dir.exists():
             return []
             
-        # Ignore .tmp files when reading images
         files = [f for f in chapter_dir.iterdir() if f.is_file() and not f.name.endswith('.tmp')]
         files.sort(key=lambda f: f.name)
         return [f"{provider_id}/{comic_id}/{chapter_id}/{f.name}" for f in files]
@@ -148,7 +184,6 @@ class LocalJsonStorage(IArchiveStorage):
         base_name = f"{index:03d}"
         existing_files = list(chapter_dir.glob(f"{base_name}.*"))
         
-        # Must not be a .tmp file and must be > 0 bytes
         for f in existing_files:
             if not f.name.endswith('.tmp') and f.stat().st_size > 0:
                 return True
@@ -174,3 +209,8 @@ class LocalJsonStorage(IArchiveStorage):
                     yield chunk
                     
         return file_iterator(), ctype
+
+    def delete_media(self, provider_id: str, comic_id: str) -> None:
+        target_dir = self.data_dir / provider_id / comic_id
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)

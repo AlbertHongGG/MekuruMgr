@@ -4,18 +4,23 @@ from rich.console import Console
 
 from src.core.config import app_settings
 from src.application.comic_manager import ComicManager
-from src.application.archiver_engine import ArchiverEngine
-from src.storage.factory import StorageFactory, StorageEngine
+from src.application.queue_service import DownloadQueueService
+from src.storage.factory import StorageFactory
 from src.cli.views import archive_view
-from src.cli.components.progress import RichProgressObserver
+from src.domain.models.archive import TaskStatus
 
-archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete)")
+archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete, Queue)")
 console = Console()
 
-def get_archiver():
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
+def get_queue_service() -> DownloadQueueService:
+    provider = StorageFactory.get_provider()
     manager = ComicManager()
-    return ArchiverEngine(manager, provider.get_archive_storage())
+    return DownloadQueueService(
+        manager=manager,
+        library_storage=provider.get_library_storage(),
+        task_storage=provider.get_task_storage(),
+        media_storage=provider.get_media_storage()
+    )
 
 @archive_app.command(name="track")
 def track_comic(
@@ -29,43 +34,110 @@ def track_comic(
         archive_view.render_error("No comic ID provided and no default in .env")
         raise typer.Exit(1)
         
-    archiver = get_archiver()
+    qs = get_queue_service()
     
     with console.status(f"[cyan]Tracking comic {comic_id} from {provider_id}...[/cyan]", spinner="dots"):
-        archived = asyncio.run(archiver.track_comic(provider_id, comic_id))
+        archived = asyncio.run(qs.track_comic(provider_id, comic_id))
         
     archive_view.render_track_success(archived)
+
+async def _sync_and_wait(qs: DownloadQueueService, provider_id: str, comic_id: str):
+    task = await qs.submit_sync(provider_id, comic_id)
+    qs.start()
+    
+    task_id = f"{provider_id}::{comic_id}"
+    
+    # Simple polling for CLI progress display
+    from src.cli.components.progress import RichProgressObserver
+    # Note: RichProgressObserver needs to be adapted to read from TaskStatus. 
+    # For now, we will just use a generic spinner or simple print loop, 
+    # since the original observer was event-based.
+    
+    console.print(f"[cyan]Starting sync for {comic_id}...[/cyan]")
+    try:
+        while True:
+            current = qs.get_progress(provider_id, comic_id)
+            if not current:
+                break
+                
+            if current.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.PAUSED]:
+                console.print(f"Task finished with status: {current.status.value}")
+                if current.error_message:
+                    console.print(f"[red]Error: {current.error_message}[/red]")
+                break
+                
+            # Print minimal progress (e.g., how many chapters done)
+            comp = current.completed_chapters
+            tot = current.total_chapters
+            console.print(f"Progress: {comp}/{tot} chapters completed...", end="\r")
+            
+            await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        qs.pause_task(task_id)
+        console.print("\n[yellow]Sync paused by user.[/yellow]")
+    finally:
+        await qs.stop()
 
 @archive_app.command(name="sync")
 def sync_comic(
     comic_id: str = typer.Argument(None, help="The ID of the comic to sync. Uses env default if omitted."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
-    """Perform an incremental sync to download missing or failed chapters."""
+    """Perform an incremental sync (adds to queue and starts downloading)."""
     comic_id = comic_id or app_settings.default_comic_id
     provider_id = provider_id or app_settings.default_provider
     if not comic_id:
         archive_view.render_error("No comic ID provided and no default in .env")
         raise typer.Exit(1)
         
-    archiver = get_archiver()
-    console.print(f"[cyan]Starting incremental sync for comic {comic_id} from {provider_id}...[/cyan]")
+    qs = get_queue_service()
     
-    observer = RichProgressObserver()
     try:
-        archived = asyncio.run(archiver.sync_comic(provider_id, comic_id, observer=observer))
-        archive_view.render_sync_success(archived)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        console.print("\n[bold yellow]Sync manually cancelled by user. Progress has been safely saved.[/bold yellow]")
-    finally:
-        observer.progress.stop()
+        asyncio.run(_sync_and_wait(qs, provider_id, comic_id))
+    except KeyboardInterrupt:
+        qs.pause_task(f"{provider_id}::{comic_id}")
+        console.print("\n[bold yellow]Sync manually paused. Run sync again to resume.[/bold yellow]")
+
+@archive_app.command(name="pause")
+def pause_comic(
+    comic_id: str = typer.Argument(..., help="The ID of the comic to pause."),
+    provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
+):
+    """Pause an active sync task."""
+    provider_id = provider_id or app_settings.default_provider
+    qs = get_queue_service()
+    if qs.pause_task(f"{provider_id}::{comic_id}"):
+        console.print(f"[green]Task paused: {comic_id}[/green]")
+    else:
+        console.print(f"[red]Task not found or cannot be paused: {comic_id}[/red]")
+
+@archive_app.command(name="resume")
+def resume_comic(
+    comic_id: str = typer.Argument(..., help="The ID of the comic to resume."),
+    provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
+):
+    """Resume a paused sync task."""
+    provider_id = provider_id or app_settings.default_provider
+    qs = get_queue_service()
+    if qs.resume_task(f"{provider_id}::{comic_id}"):
+        console.print(f"[green]Task queued for resume: {comic_id}[/green]")
+        console.print("Run 'sync' to start processing or let the server handle it.")
+    else:
+        console.print(f"[red]Task not found or cannot be resumed: {comic_id}[/red]")
 
 @archive_app.command(name="list")
 def list_archives():
-    """List all locally archived comics."""
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
-    comics = provider.get_archive_storage().list_comics()
+    """List all locally tracked comics."""
+    qs = get_queue_service()
+    comics = qs.library_storage.list_comics()
     archive_view.render_archive_list(comics)
+
+@archive_app.command(name="queue")
+def list_queue():
+    """List all tasks in the download queue."""
+    qs = get_queue_service()
+    tasks = qs.task_storage.list_tasks()
+    archive_view.render_task_list(tasks)
 
 @archive_app.command(name="delete")
 def delete_archive(
@@ -74,9 +146,15 @@ def delete_archive(
 ):
     """Delete a comic from the local archive."""
     provider_id = provider_id or app_settings.default_provider
-    archiver = get_archiver()
+    qs = get_queue_service()
     try:
-        archiver.delete_archived_comic(provider_id, comic_id)
+        qs.library_storage.delete_comic(provider_id, comic_id)
+        qs.media_storage.delete_media(provider_id, comic_id)
+        
+        task_id = f"{provider_id}::{comic_id}"
+        qs.cancel_task(task_id)
+        qs.task_storage.delete_task(task_id)
+        
         archive_view.render_delete_success(comic_id)
     except Exception as e:
         archive_view.render_error(str(e))

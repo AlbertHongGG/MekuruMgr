@@ -1,81 +1,73 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 
-from src.domain.models import ArchivedComic
+from src.domain.models.archive import LibraryComic, DownloadTask
 
-class IArchiveStorage(ABC):
-    """
-    Facade interface for complete comic storage operations (both metadata and physical media).
-    Any engine using this interface knows nothing about how the underlying data is stored.
-    """
-    
-    # --- Metadata Operations ---
+class ILibraryStorage(ABC):
     @abstractmethod
-    def get_comic(self, provider_id: str, comic_id: str) -> Optional[ArchivedComic]:
-        """Retrieve a tracked comic by its ID."""
+    def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
         pass
 
     @abstractmethod
-    def save_comic(self, comic: ArchivedComic) -> None:
-        """Save or update a tracked comic."""
+    def save_comic(self, comic: LibraryComic) -> None:
         pass
 
     @abstractmethod
     def delete_comic(self, provider_id: str, comic_id: str) -> None:
-        """Delete a tracked comic and all its media from the storage."""
         pass
         
     @abstractmethod
-    def list_comics(self) -> List[ArchivedComic]:
-        """List all tracked comics."""
+    def list_comics(self) -> List[LibraryComic]:
         pass
 
     @abstractmethod
-    def search_comics(self, keyword: str) -> List[ArchivedComic]:
-        """Search tracked comics by keyword (title, tags, description)."""
+    def search_comics(self, keyword: str) -> List[LibraryComic]:
         pass
 
-    # --- Media Operations ---
+
+class ITaskStorage(ABC):
+    @abstractmethod
+    def get_task(self, task_id: str) -> Optional[DownloadTask]:
+        pass
+
+    @abstractmethod
+    def save_task(self, task: DownloadTask) -> None:
+        pass
+        
+    @abstractmethod
+    def delete_task(self, task_id: str) -> None:
+        pass
+        
+    @abstractmethod
+    def list_tasks(self) -> List[DownloadTask]:
+        pass
+
+
+class IMediaStorage(ABC):
     @abstractmethod
     async def save_image(self, provider_id: str, comic_id: str, chapter_id: str, index: int, content: bytes, content_type: str) -> str:
-        """
-        Saves a binary image (atomic) and returns its relative filename/identifier.
-        If chapter_id is 'cover', saves as cover.
-        """
         pass
 
     @abstractmethod
     def get_chapter_images(self, provider_id: str, comic_id: str, chapter_id: str) -> List[str]:
-        """
-        Returns a sorted list of relative paths/URLs to the actual image files.
-        """
         pass
 
     @abstractmethod
     def count_downloaded_images(self, provider_id: str, comic_id: str, chapter_id: str) -> int:
-        """
-        Counts physical/valid files in the chapter storage to verify completion.
-        """
         pass
 
     @abstractmethod
     def get_image_stream(self, relative_path: str) -> tuple[Any, str]:
-        """
-        Get a byte stream and MIME type for an archived image.
-        Returns: (iterator_of_bytes, content_type)
-        """
         pass
         
     @abstractmethod
     def check_image_exists(self, provider_id: str, comic_id: str, chapter_id: str, index: int) -> bool:
-        """
-        For image-level resuming: checks if a specific index was already downloaded and is valid.
-        """
         pass
 
     @abstractmethod
     def is_chapter_missing(self, provider_id: str, comic_id: str, chapter_id: str) -> bool:
-        """
-        Checks if the chapter storage completely doesn't exist.
-        """
+        pass
+        
+    @abstractmethod
+    def delete_media(self, provider_id: str, comic_id: str) -> None:
         pass

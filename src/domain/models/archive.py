@@ -3,20 +3,41 @@ from typing import List, Dict, Optional
 from enum import Enum
 from datetime import datetime
 
-class DownloadStatus(str, Enum):
-    PENDING = "pending"
+class TaskStatus(str, Enum):
+    QUEUED = "queued"
     DOWNLOADING = "downloading"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
-class ArchivedChapter(BaseModel):
+class ChapterTask(BaseModel):
     chapter_id: str
     title: str
-    page_count: int = 0
-    local_path: str = ""
-    status: DownloadStatus = DownloadStatus.PENDING
+    status: TaskStatus = TaskStatus.QUEUED
+    total_pages: int = 0
+    downloaded_pages: int = 0
+    error_message: Optional[str] = None
 
-class ArchivedComic(BaseModel):
+class DownloadTask(BaseModel):
+    task_id: str  # Format: "provider_id::comic_id"
+    provider_id: str
+    comic_id: str
+    status: TaskStatus = TaskStatus.QUEUED
+    chapters: Dict[str, ChapterTask] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    error_message: Optional[str] = None
+    
+    @property
+    def total_chapters(self) -> int:
+        return len(self.chapters)
+        
+    @property
+    def completed_chapters(self) -> int:
+        return sum(1 for ch in self.chapters.values() if ch.status == TaskStatus.COMPLETED)
+
+class LibraryComic(BaseModel):
     provider_id: str
     comic_id: str
     title: str
@@ -25,24 +46,5 @@ class ArchivedComic(BaseModel):
     description: str
     cover_url: str
     local_path: str
-    chapters: Dict[str, ArchivedChapter] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-
-class ChapterSyncProgress(BaseModel):
-    chapter_id: str
-    title: str
-    total_pages: int
-    downloaded_pages: int
-    status: DownloadStatus
-
-class ComicSyncProgress(BaseModel):
-    provider_id: str
-    comic_id: str
-    total_chapters: int
-    completed_chapters: int
-    failed_chapters: int
-    pending_chapters: int
-    downloading_chapters: int
-    active_chapters: List[ChapterSyncProgress] = Field(default_factory=list)
-
