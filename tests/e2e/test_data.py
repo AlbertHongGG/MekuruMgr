@@ -1,16 +1,7 @@
 PROVIDERS_TEST_DATA = [
-    ("webtoon", "奶烙陷阱"),
-    ("comicwifi", "骷髏"),
-    ("copymanga", "最強暗殺者"),
-    ("manwa", "骷髏"),
-    ("guazi", "骷髅"),
+    ("webtoon", "奶烙陷阱", "175"),
+    ("comicwifi", "骷髏", "kulounaiba"),
+    ("copymanga", "最強暗殺者", "zuiqiangaszysjzhuanyi"),
+    ("manwa", "骷髏", "456906"),
+    ("guazi", "骷髅", "13054"),
 ]
-
-def get_test_cases():
-    return [
-        {
-            "provider": "comicwifi",
-            "comic_id": "7e68b404b74ffff98a9b77d4f24abefe"
-        }
-    ]
-

@@ -119,14 +119,11 @@ class DownloadQueueService:
         if not task:
             return False
             
-        if task.status == TaskStatus.QUEUED:
+        if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
+            if task.status == TaskStatus.DOWNLOADING and task_id in self._cancellation_events:
+                self._cancellation_events[task_id].set()
             task.status = TaskStatus.PAUSED
             self.task_storage.save_task(task)
-            return True
-            
-        if task.status == TaskStatus.DOWNLOADING:
-            if task_id in self._cancellation_events:
-                self._cancellation_events[task_id].set()
             return True
             
         return False
@@ -192,23 +189,33 @@ class DownloadQueueService:
             remote_chapters = await asyncio.to_thread(self.manager.fetch_all_chapters, task.comic_id)
             
             # 2. Update task chapters state
+            t_update = self.task_storage.get_task(task_id)
+            if not t_update:
+                return
+                
             new_chapters_added = False
             for r_ch in remote_chapters:
-                if r_ch.id not in task.chapters:
-                    task.chapters[r_ch.id] = ChapterTask(
+                if r_ch.id not in t_update.chapters:
+                    t_update.chapters[r_ch.id] = ChapterTask(
                         chapter_id=r_ch.id,
                         title=r_ch.title
                     )
                     new_chapters_added = True
                     
             if new_chapters_added:
-                self.task_storage.save_task(task)
+                self.task_storage.save_task(t_update)
             
             # 3. Process chapters
             async with httpx.AsyncClient() as client:
-                for ch_id, chapter_task in task.chapters.items():
+                for ch_id in list(t_update.chapters.keys()):
                     if cancel_event.is_set():
                         break
+                        
+                    t_update = self.task_storage.get_task(task_id)
+                    if not t_update or ch_id not in t_update.chapters:
+                        continue
+                    
+                    chapter_task = t_update.chapters[ch_id]
                         
                     if chapter_task.status == TaskStatus.COMPLETED:
                         # Verify files
@@ -219,16 +226,21 @@ class DownloadQueueService:
                             chapter_task.status = TaskStatus.QUEUED
                             
                     chapter_task.status = TaskStatus.DOWNLOADING
-                    self.task_storage.save_task(task)
+                    self.task_storage.save_task(t_update)
                     
                     try:
                         images = await asyncio.to_thread(self.manager.fetch_chapter_images, task.comic_id, ch_id)
-                        chapter_task.total_pages = len(images)
+                        
+                        t_update = self.task_storage.get_task(task_id)
+                        if not t_update or ch_id not in t_update.chapters:
+                            continue
+                            
+                        t_update.chapters[ch_id].total_pages = len(images)
                         
                         # Recount downloaded
                         downloaded = self.media_storage.count_downloaded_images(task.provider_id, task.comic_id, ch_id)
-                        chapter_task.downloaded_pages = downloaded
-                        self.task_storage.save_task(task)
+                        t_update.chapters[ch_id].downloaded_pages = downloaded
+                        self.task_storage.save_task(t_update)
                         
                         for index, image in enumerate(images):
                             if cancel_event.is_set():
@@ -263,7 +275,8 @@ class DownloadQueueService:
             t_final = self.task_storage.get_task(task_id)
             if t_final:
                 if cancel_event.is_set():
-                    t_final.status = TaskStatus.PAUSED
+                    if t_final.status == TaskStatus.DOWNLOADING:
+                        t_final.status = TaskStatus.PAUSED
                 else:
                     all_completed = all(c.status == TaskStatus.COMPLETED for c in t_final.chapters.values())
                     any_failed = any(c.status == TaskStatus.FAILED for c in t_final.chapters.values())

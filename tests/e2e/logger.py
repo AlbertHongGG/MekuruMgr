@@ -1,23 +1,19 @@
 import os
 
-current_test_mode = "unknown"
-
 class TestOutputLogger:
-    def __init__(self, mode: str, name: str):
+    def __init__(self, file_path: str, title: str):
         """
-        mode: e.g., 'cli' or 'server'
-        name: e.g., 'webtoon', 'library'
+        file_path: The absolute or relative path to the log file (e.g., test_outputs/cli/webtoon/comic.log)
+        title: Title to write at the beginning of the log.
         """
-        global current_test_mode
-        current_test_mode = mode
+        self.output_file = file_path
+        os.makedirs(os.path.dirname(self.output_file), exist_ok=True)
         
-        self.output_dir = os.path.join("test_outputs", mode, name)
-        os.makedirs(self.output_dir, exist_ok=True)
-        self.output_file = os.path.join(self.output_dir, "flow_output.txt")
+        is_new = not os.path.exists(self.output_file)
         
-        # 每次初始化時清空檔案
-        with open(self.output_file, "w", encoding="utf-8") as f:
-            f.write(f"=== E2E Test Output ({mode.upper()}) - {name} ===\n\n")
+        with open(self.output_file, "a", encoding="utf-8") as f:
+            if is_new:
+                f.write(f"=== {title} ===\n\n")
             
     def log_step(self, title: str, request_info: str, output: str):
         with open(self.output_file, "a", encoding="utf-8") as f:

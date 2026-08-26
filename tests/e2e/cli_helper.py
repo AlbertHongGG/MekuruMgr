@@ -1,20 +1,14 @@
 from typer.testing import CliRunner
 from .logger import TestOutputLogger
+import typer
 
 class CliTestHelper:
-    def __init__(self, app):
+    def __init__(self, app: typer.Typer, logger: TestOutputLogger):
         self.app = app
         self.runner = CliRunner()
-        self.logger = None
-
-    def set_target(self, target_name: str):
-        """Set the target name (e.g. 'webtoon') to initialize logging."""
-        self.logger = TestOutputLogger(mode="cli", name=target_name)
+        self.logger = logger
 
     def invoke(self, step_title: str, args_list: list) -> str:
-        if not self.logger:
-            raise RuntimeError("Must call set_target() before invoke()")
-            
         cmd_str = f"cli {' '.join(args_list)}"
         result = self.runner.invoke(self.app, args_list)
         
@@ -26,5 +20,4 @@ class CliTestHelper:
         return output
 
     def log_message(self, message: str):
-        if self.logger:
-            self.logger.log_message(message)
+        self.logger.log_message(message)
