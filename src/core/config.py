@@ -23,5 +23,6 @@ class AppConfig(BaseSettings):
     
     # Storage
     storage_engine: str = Field(default="json")
+    data_dir: str = Field(default="data")
 
 app_settings = AppConfig()

@@ -13,7 +13,7 @@ def get_queue_service(request: Request) -> DownloadQueueService:
 @archive_router.get("/", response_model=List[LibraryComic])
 def list_archived_comics():
     """List all locally tracked comics."""
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    provider = StorageFactory.get_provider()
     return provider.get_library_storage().list_comics()
 
 @archive_router.get("/queue", response_model=List[DownloadTask])
@@ -25,7 +25,7 @@ def get_active_queue(queue_service: DownloadQueueService = Depends(get_queue_ser
 @archive_router.get("/{provider_id}/{comic_id}", response_model=LibraryComic)
 def get_archived_comic(provider_id: str, comic_id: str):
     """Get metadata for a specific tracked comic."""
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    provider = StorageFactory.get_provider()
     comic = provider.get_library_storage().get_comic(provider_id, comic_id)
     if not comic:
         raise HTTPException(status_code=404, detail="Tracked comic not found")

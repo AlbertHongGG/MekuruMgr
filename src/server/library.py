@@ -10,7 +10,7 @@ from src.storage.factory import StorageFactory
 library_router = APIRouter(prefix="/api/v1/library", tags=["Library"])
 
 def get_service(request: Request) -> LibraryService:
-    provider = StorageFactory.get_provider(StorageEngine.JSON)
+    provider = StorageFactory.get_provider()
     # The new absolute API URL for the media proxy
     base_media_url = str(request.base_url) + "api/v1/library/media/"
     return LibraryService(
@@ -24,7 +24,7 @@ def get_service(request: Request) -> LibraryService:
 def get_archived_media(path: str):
     """Serve an archived media file using the storage engine."""
     try:
-        provider = StorageFactory.get_provider(StorageEngine.JSON)
+        provider = StorageFactory.get_provider()
         stream_gen, content_type = provider.get_media_storage().get_image_stream(path)
         return StreamingResponse(stream_gen, media_type=content_type)
     except AppBaseError as e:
