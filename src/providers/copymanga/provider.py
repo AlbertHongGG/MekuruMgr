@@ -6,8 +6,11 @@ from src.core.registry import registry
 from .api import CopymangaApiClient
 
 class CopymangaProvider(BaseComicProvider):
-    def __init__(self):
-        self.api = CopymangaApiClient()
+    def __init__(self, api_client=None):
+        self.api = api_client or CopymangaApiClient()
+
+    def add_api_hook(self, hook: Any) -> None:
+        self.api.http_client.add_hook(hook)
 
     @property
     def provider_id(self) -> str:

@@ -5,8 +5,11 @@ from src.core.registry import registry
 from .api import WebtoonApiClient
 
 class WebtoonProvider(BaseComicProvider):
-    def __init__(self):
-        self.api = WebtoonApiClient()
+    def __init__(self, api_client=None):
+        self.api = api_client or WebtoonApiClient()
+
+    def add_api_hook(self, hook: Any) -> None:
+        self.api.http.add_hook(hook)
 
     @property
     def provider_id(self) -> str:

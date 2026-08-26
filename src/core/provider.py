@@ -14,6 +14,13 @@ class BaseComicProvider(ABC):
         """A unique identifier for this provider (e.g., 'comicwifi')."""
         pass
 
+    def add_api_hook(self, hook: Any) -> None:
+        """
+        Add an interceptor hook to the underlying HTTP clients.
+        Providers should override this if they have internal HTTP clients.
+        """
+        pass
+
     @property
     @abstractmethod
     def provider_name(self) -> str:

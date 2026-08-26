@@ -13,8 +13,11 @@ from .models.api_models import GuaziComicList, GuaziComicDetail, GuaziChapterIte
 logger = logging.getLogger(__name__)
 
 class GuaziProvider(BaseComicProvider):
-    def __init__(self):
-        self.client = GuaziHttpClient()
+    def __init__(self, http_client=None):
+        self.client = http_client or GuaziHttpClient()
+
+    def add_api_hook(self, hook: Any) -> None:
+        self.client.add_hook(hook)
 
     @property
     def provider_id(self) -> str:

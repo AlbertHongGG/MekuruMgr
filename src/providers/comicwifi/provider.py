@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 import logging
 
 from src.core.provider import BaseComicProvider
@@ -19,9 +19,12 @@ class ComicWifiProvider(BaseComicProvider):
     and maps the specific JSON responses back to standardized models.
     """
     
-    def __init__(self):
-        self._http = ComicWifiHttpClient()
+    def __init__(self, http_client=None):
+        self._http = http_client or ComicWifiHttpClient()
         self._api = ComicApiClient(self._http)
+
+    def add_api_hook(self, hook: Any) -> None:
+        self._http.add_hook(hook)
 
     @property
     def provider_id(self) -> str:

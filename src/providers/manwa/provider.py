@@ -18,9 +18,12 @@ class ManwaProvider(BaseComicProvider):
     def provider_name(self) -> str:
         return "Manwa"
 
-    def __init__(self):
+    def __init__(self, http_client=None):
         super().__init__()
-        self.client = ManwaHttpClient()
+        self.client = http_client or ManwaHttpClient()
+
+    def add_api_hook(self, hook: Any) -> None:
+        self.client.add_hook(hook)
         
     def _map_search_result(self, items) -> List[ComicSearchResult]:
         results = []

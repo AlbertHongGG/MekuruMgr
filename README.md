@@ -241,7 +241,18 @@ GET /api/v1/library/media/{provider_id}/{comic_id}/cover.jpg
 GET /api/v1/library/media/{provider_id}/{comic_id}/{chapter_id}/000.jpg
 ```
 
-# Test
-```text
-uv run pytest tests/
+## Testing
+
+To run the automated test suite and generate manual inspection logs, run:
+
+```bash
+uv run pytest tests/e2e
 ```
+
+### Important Testing Information
+
+*   **Test Outputs**: All test results and raw API packets are generated in the `test_outputs/` directory.
+    *   **CLI Tests**: Output is stored in `test_outputs/cli/<provider_name>/`.
+    *   **Server Tests**: Output is stored in `test_outputs/server/<provider_name>/`.
+*   **Auto-Cleaning**: The `test_outputs/` directory is automatically cleared at the beginning of each test run, ensuring no stale data remains.
+*   **Packet Sniffing**: Tests will automatically intercept and save the raw JSON responses from remote Provider APIs into the provider's respective `cli` or `server` output directory. This is useful for manually verifying the actual data returned by the source without needing a proxy.
