@@ -4,7 +4,7 @@ from typing import List
 from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 from src.domain.models import (
     LocalComicItem, 
-    LocalComicDetail, 
+    LocalComic, 
     LocalChapterItem, 
     LocalChapterImages,
     TaskStatus
@@ -33,10 +33,10 @@ class LibraryService:
         archived_comics = await self.library_storage.list_comics()
         items = []
         for c in archived_comics:
-            completed_count = await self._get_completed_chapters_count(c.provider_id, c.comic_id)
+            completed_count = await self._get_completed_chapters_count(c.provider_id, c.id)
             items.append(LocalComicItem(
                 provider_id=c.provider_id,
-                comic_id=c.comic_id,
+                id=c.id,
                 title=c.title,
                 cover_url=c.cover_url,
                 completed_chapters_count=completed_count
@@ -51,25 +51,25 @@ class LibraryService:
         archived_comics = await self.library_storage.search_comics(keyword.strip())
         items = []
         for c in archived_comics:
-            completed_count = await self._get_completed_chapters_count(c.provider_id, c.comic_id)
+            completed_count = await self._get_completed_chapters_count(c.provider_id, c.id)
             items.append(LocalComicItem(
                 provider_id=c.provider_id,
-                comic_id=c.comic_id,
+                id=c.id,
                 title=c.title,
                 cover_url=c.cover_url,
                 completed_chapters_count=completed_count
             ))
         return items
 
-    async def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComicDetail:
+    async def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComic:
         """Get comic details without chapter array."""
         c = await self.library_storage.get_comic(provider_id, comic_id)
         if not c:
             raise AppBaseError(f"Comic {comic_id} from {provider_id} not found in library.")
 
-        return LocalComicDetail(
+        return LocalComic(
             provider_id=c.provider_id,
-            comic_id=c.comic_id,
+            id=c.id,
             title=c.title,
             author=c.author,
             tags=c.tags,
@@ -89,8 +89,8 @@ class LibraryService:
         if task:
             for ch in task.chapters.values():
                 if ch.status == TaskStatus.COMPLETED:
-                    completed_chapters.append(LocalChapterItem(
-                        chapter_id=ch.chapter_id,
+                    completed_chapters.append(LocalChapterItem(id=ch.chapter_id, 
+                        
                         title=ch.title,
                         page_count=ch.total_pages
                     ))

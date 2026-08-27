@@ -4,7 +4,7 @@ from typing import List
 import urllib.parse
 
 from src.core.interfaces import ILibraryService
-from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem, LibraryComic
+from src.domain.models import LocalComicItem, LocalComic, LocalChapterImages, LocalChapterItem, LocalComic
 from src.domain.exceptions import AppBaseError
 from src.server.dependencies import get_library_service, get_container, resolve_provider
 
@@ -64,7 +64,7 @@ async def explore_library_comics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@library_router.get("/{provider_id}/{comic_id}", response_model=LocalComicDetail)
+@library_router.get("/{provider_id}/{comic_id}", response_model=LocalComic)
 async def get_library_comic_detail(
     request: Request,
     comic_id: str, 

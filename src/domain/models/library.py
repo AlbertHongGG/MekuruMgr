@@ -1,29 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import datetime
+from .comic import ComicDetail, Chapter, ComicInfo
 
-class LocalComicItem(BaseModel):
-    """Basic comic info for library listing."""
-    provider_id: str
-    comic_id: str
-    title: str
-    cover_url: str
-    completed_chapters_count: int
+class LocalComicItem(ComicInfo):
+    """Lightweight projection for library listings."""
+    completed_chapters_count: int = 0
 
-class LocalChapterItem(BaseModel):
-    """Basic chapter info within a comic detail."""
-    chapter_id: str
-    title: str
-    page_count: int
+class LocalChapterItem(Chapter):
+    """Chapter info in local library."""
+    page_count: int = 0
 
-class LocalComicDetail(BaseModel):
-    """Detailed comic info without chapter list."""
-    provider_id: str
-    comic_id: str
-    title: str
-    author: Optional[str] = None
-    tags: List[str]
-    description: str
-    cover_url: str
+class LocalComic(ComicDetail):
+    """Represents a comic that has been tracked/downloaded into the local library."""
+    local_path: str = ""
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 class LocalChapterImages(BaseModel):
     """Complete image URLs for a specific chapter."""
@@ -32,4 +24,3 @@ class LocalChapterImages(BaseModel):
     chapter_id: str
     title: str
     images: List[str]
-

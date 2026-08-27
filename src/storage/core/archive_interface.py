@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any, Tuple
 
-from src.domain.models.archive import LibraryComic, DownloadTask
+from src.domain.models import LocalComic, DownloadTask
 
 class ILibraryStorage(ABC):
     @abstractmethod
-    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
+    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LocalComic]:
         pass
 
     @abstractmethod
-    async def save_comic(self, comic: LibraryComic) -> None:
+    async def save_comic(self, comic: LocalComic) -> None:
         pass
 
     @abstractmethod
@@ -17,11 +17,11 @@ class ILibraryStorage(ABC):
         pass
         
     @abstractmethod
-    async def list_comics(self) -> List[LibraryComic]:
+    async def list_comics(self) -> List[LocalComic]:
         pass
 
     @abstractmethod
-    async def search_comics(self, keyword: str) -> List[LibraryComic]:
+    async def search_comics(self, keyword: str) -> List[LocalComic]:
         pass
 
 

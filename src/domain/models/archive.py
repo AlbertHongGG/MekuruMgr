@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from enum import Enum
 from datetime import datetime
+from .library import LocalComic
 
 class TaskStatus(str, Enum):
     QUEUED = "queued"
@@ -38,15 +39,3 @@ class DownloadTask(BaseModel):
     @property
     def completed_chapters(self) -> int:
         return sum(1 for ch in self.chapters.values() if ch.status == TaskStatus.COMPLETED)
-
-class LibraryComic(BaseModel):
-    provider_id: str
-    comic_id: str
-    title: str
-    author: Optional[str] = None
-    tags: List[str]
-    description: str
-    cover_url: str
-    local_path: str
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)

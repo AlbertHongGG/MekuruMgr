@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List
 
 from src.core.container import AppContainer
-from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
+from src.domain.models import LocalComic, DownloadTask, TaskStatus
 from src.application.archive_engine import ArchiveEngine
 from src.server.dependencies import resolve_provider
 
@@ -12,7 +12,7 @@ archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 def get_archive_engine(request: Request) -> ArchiveEngine:
     return request.app.state.container.archive_engine
 
-@archive_router.get("/", response_model=List[LibraryComic])
+@archive_router.get("/", response_model=List[LocalComic])
 async def list_archived_comics(archive_engine: ArchiveEngine = Depends(get_archive_engine)):
     """List all locally tracked comics."""
     
@@ -24,7 +24,7 @@ async def get_active_queue(archive_engine: ArchiveEngine = Depends(get_archive_e
     tasks = await archive_engine.task_storage.list_tasks()
     return tasks
 
-@archive_router.get("/{provider_id}/{comic_id}", response_model=LibraryComic)
+@archive_router.get("/{provider_id}/{comic_id}", response_model=LocalComic)
 async def get_archived_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider),

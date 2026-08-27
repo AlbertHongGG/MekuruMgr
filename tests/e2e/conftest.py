@@ -128,7 +128,7 @@ def server_helper(test_logger):
 def mock_library(current_test_info):
     """Inject a dummy comic into the isolated data_dir for library tests."""
     
-    from src.domain.models.archive import LibraryComic, DownloadTask, ChapterTask, TaskStatus
+    from src.domain.models import LocalComic, DownloadTask, ChapterTask, TaskStatus
     import asyncio
     
     # 使用當前執行的 provider 和 comic_id 來建立 mock，確保一致性
@@ -152,9 +152,9 @@ def mock_library(current_test_info):
     import os
     provider = SqliteStorageProvider(os.environ["APP_STORAGE__DATA_DIR"])
     
-    lib_comic = LibraryComic(
+    lib_comic = LocalComic(
         provider_id=provider_id,
-        comic_id=comic_id,
+        id=comic_id,
         title=f"Test Comic {comic_id}",
         author="Test Author",
         description="A comic for testing",

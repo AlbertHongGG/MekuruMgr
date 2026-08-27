@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 
 from src.domain.models import ComicDetail, Chapter, PageImage, ComicSearchResult, ComicExploreResult
-from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterItem, LocalChapterImages
+from src.domain.models import LocalComicItem, LocalComic, LocalChapterItem, LocalChapterImages
 from src.domain.models.archive import DownloadTask
 
 class IComicManager(ABC):
@@ -53,7 +53,7 @@ class ILibraryService(ABC):
         pass
 
     @abstractmethod
-    async def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComicDetail:
+    async def get_comic_detail(self, provider_id: str, comic_id: str) -> LocalComic:
         pass
 
     @abstractmethod

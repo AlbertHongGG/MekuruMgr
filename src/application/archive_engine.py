@@ -6,7 +6,7 @@ import httpx
 
 from src.application.comic_manager import ComicManager
 from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
-from src.domain.models.archive import DownloadTask, ChapterTask, TaskStatus, LibraryComic
+from src.domain.models.archive import DownloadTask, ChapterTask, TaskStatus, LocalComic
 
 logger = logging.getLogger(__name__)
 
@@ -176,13 +176,13 @@ class ArchiveEngine:
         logger.info(f"Task submitted: {task_id}")
         return task
 
-    async def track_comic(self, provider_id: str, comic_id: str) -> LibraryComic:
+    async def track_comic(self, provider_id: str, comic_id: str) -> LocalComic:
         self.manager.use(provider_id)
         comic_detail = await asyncio.to_thread(self.manager.fetch_comic_detail, comic_id)
         
-        library_comic = LibraryComic(
+        library_comic = LocalComic(
             provider_id=provider_id,
-            comic_id=comic_id,
+            id=comic_id,
             title=comic_detail.title,
             author=comic_detail.author,
             tags=comic_detail.tags,

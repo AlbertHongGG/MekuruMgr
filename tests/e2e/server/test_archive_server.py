@@ -68,7 +68,7 @@ def test_archive_server_queue_flow(provider, keyword, comic_id, server_helper: S
     
     # 7. Check Library List
     lib_list = server_helper.get("List Archives", "/api/v1/archive/")
-    assert any(c["comic_id"] == comic_id for c in lib_list)
+    assert any(c["id"] == comic_id for c in lib_list)
     
     # 8. Clean up (this cancels the task and deletes the comic)
     del_res = server_helper.client.delete(f"/api/v1/archive/{provider}/{comic_id}")

@@ -6,7 +6,7 @@ from typing import Dict, Optional, List
 
 from pydantic import TypeAdapter
 
-from src.domain.models.archive import LibraryComic, DownloadTask
+from src.domain.models import LocalComic, DownloadTask
 from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ class SqliteLibraryStorage(ILibraryStorage):
     def __init__(self, db_path: str = "data/comicmgr.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ta = TypeAdapter(LibraryComic)
+        self._ta = TypeAdapter(LocalComic)
         self._init_task = None
 
     async def _init_db(self):
@@ -36,7 +36,7 @@ class SqliteLibraryStorage(ILibraryStorage):
             await self._init_db()
             self._initialized = True
 
-    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
+    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LocalComic]:
         await self._ensure_init()
         key = f"{provider_id}::{comic_id}"
         async with aiosqlite.connect(self.db_path) as db:
@@ -46,9 +46,9 @@ class SqliteLibraryStorage(ILibraryStorage):
                     return self._ta.validate_json(row[0])
         return None
 
-    async def save_comic(self, comic: LibraryComic) -> None:
+    async def save_comic(self, comic: LocalComic) -> None:
         await self._ensure_init()
-        key = f"{comic.provider_id}::{comic.comic_id}"
+        key = f"{comic.provider_id}::{comic.id}"
         data_json = comic.model_dump_json()
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
@@ -57,7 +57,7 @@ class SqliteLibraryStorage(ILibraryStorage):
                 ON CONFLICT(id) DO UPDATE SET
                     title = excluded.title,
                     data = excluded.data
-            """, (key, comic.provider_id, comic.comic_id, comic.title, data_json))
+            """, (key, comic.provider_id, comic.id, comic.title, data_json))
             await db.commit()
 
     async def delete_comic(self, provider_id: str, comic_id: str) -> None:
@@ -67,7 +67,7 @@ class SqliteLibraryStorage(ILibraryStorage):
             await db.execute("DELETE FROM library WHERE id = ?", (key,))
             await db.commit()
 
-    async def list_comics(self) -> List[LibraryComic]:
+    async def list_comics(self) -> List[LocalComic]:
         await self._ensure_init()
         results = []
         async with aiosqlite.connect(self.db_path) as db:
@@ -76,7 +76,7 @@ class SqliteLibraryStorage(ILibraryStorage):
                     results.append(self._ta.validate_json(row[0]))
         return results
 
-    async def search_comics(self, keyword: str) -> List[LibraryComic]:
+    async def search_comics(self, keyword: str) -> List[LocalComic]:
         await self._ensure_init()
         keyword = keyword.lower()
         results = []
@@ -88,7 +88,7 @@ class SqliteLibraryStorage(ILibraryStorage):
                     comic = self._ta.validate_json(row[0])
                     if (keyword in comic.title.lower() or 
                         keyword in comic.description.lower() or 
-                        keyword in comic.comic_id.lower() or
+                        keyword in comic.id.lower() or
                         keyword in comic.provider_id.lower() or
                         any(keyword in tag.lower() for tag in comic.tags)):
                         results.append(comic)

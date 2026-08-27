@@ -8,7 +8,7 @@ def test_library_server_explore(provider, keyword, comic_id, server_helper: Serv
     data = server_helper.get("Explore Library", "/api/v1/library/explore")
     assert isinstance(data, list)
     assert len(data) >= 1
-    assert any(c["comic_id"] == mock_library["comic_id"] for c in data)
+    assert any(c["id"] == mock_library["comic_id"] for c in data)
 
 @pytest.mark.parametrize("provider, keyword, comic_id", PROVIDERS_TEST_DATA)
 def test_library_server_search(provider, keyword, comic_id, server_helper: ServerTestHelper, mock_library: dict):

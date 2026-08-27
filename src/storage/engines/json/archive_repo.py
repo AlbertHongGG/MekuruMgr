@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Optional, List, Any, Tuple
 from pydantic import TypeAdapter
 
-from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
+from src.domain.models import LocalComic, DownloadTask, TaskStatus
 from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 
 logger = logging.getLogger(__name__)
@@ -18,10 +18,10 @@ class JsonLibraryStorage(ILibraryStorage):
     def __init__(self, db_path: str = "data/library.json"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ta = TypeAdapter(Dict[str, LibraryComic])
+        self._ta = TypeAdapter(Dict[str, LocalComic])
         self._lock = asyncio.Lock()
 
-    async def _read_db(self) -> Dict[str, LibraryComic]:
+    async def _read_db(self) -> Dict[str, LocalComic]:
         if not await asyncio.to_thread(self.db_path.exists):
             return {}
         try:
@@ -33,7 +33,7 @@ class JsonLibraryStorage(ILibraryStorage):
             logger.error(f"Failed to read library DB: {e}")
             return {}
 
-    async def _write_db(self, data: Dict[str, LibraryComic]):
+    async def _write_db(self, data: Dict[str, LocalComic]):
         temp_path = self.db_path.with_suffix('.tmp')
         try:
             json_data = {k: v.model_dump(mode='json') for k, v in data.items()}
@@ -47,14 +47,14 @@ class JsonLibraryStorage(ILibraryStorage):
             logger.error(f"Failed to save library DB: {e}")
             raise
 
-    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
+    async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LocalComic]:
         key = f"{provider_id}::{comic_id}"
         async with self._lock:
             db = await self._read_db()
             return db.get(key)
 
-    async def save_comic(self, comic: LibraryComic) -> None:
-        key = f"{comic.provider_id}::{comic.comic_id}"
+    async def save_comic(self, comic: LocalComic) -> None:
+        key = f"{comic.provider_id}::{comic.id}"
         async with self._lock:
             db = await self._read_db()
             db[key] = comic
@@ -68,12 +68,12 @@ class JsonLibraryStorage(ILibraryStorage):
                 del db[key]
                 await self._write_db(db)
 
-    async def list_comics(self) -> List[LibraryComic]:
+    async def list_comics(self) -> List[LocalComic]:
         async with self._lock:
             db = await self._read_db()
             return list(db.values())
 
-    async def search_comics(self, keyword: str) -> List[LibraryComic]:
+    async def search_comics(self, keyword: str) -> List[LocalComic]:
         keyword = keyword.lower()
         results = []
         async with self._lock:
@@ -81,7 +81,7 @@ class JsonLibraryStorage(ILibraryStorage):
             for comic in db.values():
                 if (keyword in comic.title.lower() or 
                     keyword in comic.description.lower() or 
-                    keyword in comic.comic_id.lower() or
+                    keyword in comic.id.lower() or
                     keyword in comic.provider_id.lower() or
                     any(keyword in tag.lower() for tag in comic.tags)):
                     results.append(comic)

@@ -2,9 +2,9 @@ from typing import List
 from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
-from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
+from src.domain.models import LocalComic, DownloadTask, TaskStatus
 
-def render_track_success(comic: LibraryComic):
+def render_track_success(comic: LocalComic):
     author_str = comic.author if comic.author else "N/A"
     rprint(Panel(
         f"[green]Successfully tracked![/green]\n"
@@ -14,7 +14,7 @@ def render_track_success(comic: LibraryComic):
         title="[bold]Tracking Complete[/bold]"
     ))
 
-def render_sync_success(comic: LibraryComic):
+def render_sync_success(comic: LocalComic):
     rprint(Panel(
         f"[green]Sync queued and tracking metadata saved![/green]\n"
         f"Title: {comic.title}\n"
@@ -22,7 +22,7 @@ def render_sync_success(comic: LibraryComic):
         title="[bold]Sync Queued[/bold]"
     ))
 
-def render_archive_list(comics: List[LibraryComic]):
+def render_archive_list(comics: List[LocalComic]):
     if not comics:
         rprint("[yellow]No comics found in the local library.[/yellow]")
         return
@@ -36,7 +36,7 @@ def render_archive_list(comics: List[LibraryComic]):
     for c in comics:
         table.add_row(
             c.provider_id,
-            c.comic_id,
+            c.id,
             c.title,
             c.local_path
         )

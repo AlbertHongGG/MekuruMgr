@@ -2,7 +2,7 @@ from typing import List
 from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
-from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterItem, LocalChapterImages
+from src.domain.models import LocalComicItem, LocalComic, LocalChapterItem, LocalChapterImages
 
 def render_library_list(comics: List[LocalComicItem], title: str = "Local Comic Library"):
     if not comics:
@@ -19,14 +19,14 @@ def render_library_list(comics: List[LocalComicItem], title: str = "Local Comic 
         if c.completed_chapters_count > 0:
             table.add_row(
                 c.provider_id,
-                c.comic_id,
+                c.id,
                 c.title,
                 str(c.completed_chapters_count)
             )
         
     rprint(table)
 
-def render_library_detail(detail: LocalComicDetail, chapters: List[LocalChapterItem]):
+def render_library_detail(detail: LocalComic, chapters: List[LocalChapterItem]):
     author_str = detail.author if detail.author else "N/A"
     rprint(Panel(
         f"[bold]Title:[/] {detail.title}\n"
@@ -44,7 +44,7 @@ def render_library_detail(detail: LocalComicDetail, chapters: List[LocalChapterI
     table.add_column("Pages", justify="right")
     
     for ch in chapters:
-        table.add_row(ch.chapter_id, ch.title, str(ch.page_count))
+        table.add_row(ch.id, ch.title, str(ch.page_count))
         
     rprint(table)
 
