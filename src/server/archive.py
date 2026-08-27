@@ -3,31 +3,31 @@ from typing import List
 
 from src.storage.factory import StorageFactory
 from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
-from src.application.queue_service import DownloadQueueService
+from src.application.archive_engine import ArchiveEngine
 from src.server.deps import resolve_provider_id
 
 archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
-def get_queue_service(request: Request) -> DownloadQueueService:
+def get_queue_service(request: Request) -> ArchiveEngine:
     return request.app.state.queue_service
 
 @archive_router.get("/", response_model=List[LibraryComic])
-def list_archived_comics():
+async def list_archived_comics():
     """List all locally tracked comics."""
     provider = StorageFactory.get_provider()
-    return provider.get_library_storage().list_comics()
+    return await provider.get_library_storage().list_comics()
 
 @archive_router.get("/queue", response_model=List[DownloadTask])
-def get_active_queue(queue_service: DownloadQueueService = Depends(get_queue_service)):
+async def get_active_queue(queue_service: ArchiveEngine = Depends(get_queue_service)):
     """Get a list of all active download tasks."""
-    tasks = queue_service.task_storage.list_tasks()
+    tasks = await queue_service.task_storage.list_tasks()
     return tasks
 
 @archive_router.get("/{provider_id}/{comic_id}", response_model=LibraryComic)
-def get_archived_comic(comic_id: str, provider_id: str = Depends(resolve_provider_id)):
+async def get_archived_comic(comic_id: str, provider_id: str = Depends(resolve_provider_id)):
     """Get metadata for a specific tracked comic."""
     provider = StorageFactory.get_provider()
-    comic = provider.get_library_storage().get_comic(provider_id, comic_id)
+    comic = await provider.get_library_storage().get_comic(provider_id, comic_id)
     if not comic:
         raise HTTPException(status_code=404, detail="Tracked comic not found")
     return comic
@@ -36,7 +36,7 @@ def get_archived_comic(comic_id: str, provider_id: str = Depends(resolve_provide
 async def track_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider_id),
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Add a comic to the tracking library without downloading chapters."""
     try:
@@ -49,7 +49,7 @@ async def track_comic(
 async def sync_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider_id),
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Perform an incremental sync in the background by submitting to queue."""
     try:
@@ -62,11 +62,11 @@ async def sync_comic(
 async def pause_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider_id),
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Pause an active sync task."""
     task_id = f"{provider_id}::{comic_id}"
-    success = queue_service.pause_task(task_id)
+    success = await queue_service.pause_task_async(task_id)
     if success:
         return {"message": f"Sync task paused for {comic_id}", "status": "paused"}
     raise HTTPException(status_code=404, detail="Active task not found or cannot be paused")
@@ -75,11 +75,11 @@ async def pause_comic(
 async def resume_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider_id),
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Resume a paused sync task."""
     task_id = f"{provider_id}::{comic_id}"
-    success = queue_service.resume_task(task_id)
+    success = await queue_service.resume_task_async(task_id)
     if success:
         return {"message": f"Sync task resumed for {comic_id}", "status": "queued"}
     raise HTTPException(status_code=404, detail="Task not found or not in pausable state")
@@ -88,42 +88,42 @@ async def resume_comic(
 async def cancel_sync_comic(
     comic_id: str, 
     provider_id: str = Depends(resolve_provider_id),
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Cancel a sync task."""
     task_id = f"{provider_id}::{comic_id}"
-    success = queue_service.cancel_task(task_id)
+    success = await queue_service.cancel_task_async(task_id)
     if success:
         return {"message": f"Sync task cancelled for {comic_id}", "status": "cancelled"}
     raise HTTPException(status_code=404, detail="Task not found")
 
 @archive_router.delete("/{provider_id}/{comic_id}")
-def delete_archived_comic(
+async def delete_archived_comic(
     comic_id: str,
     provider_id: str = Depends(resolve_provider_id), 
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Delete an archived comic and all its local files."""
     try:
-        queue_service.library_storage.delete_comic(provider_id, comic_id)
-        queue_service.media_storage.delete_media(provider_id, comic_id)
+        await queue_service.library_storage.delete_comic(provider_id, comic_id)
+        await queue_service.media_storage.delete_media(provider_id, comic_id)
         
         task_id = f"{provider_id}::{comic_id}"
-        queue_service.cancel_task(task_id)
-        queue_service.task_storage.delete_task(task_id)
+        await queue_service.cancel_task_async(task_id)
+        await queue_service.task_storage.delete_task(task_id)
         
         return {"message": f"Comic {comic_id} deleted successfully."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @archive_router.get("/{provider_id}/{comic_id}/progress")
-def get_sync_progress(
+async def get_sync_progress(
     comic_id: str,
     provider_id: str = Depends(resolve_provider_id), 
-    queue_service: DownloadQueueService = Depends(get_queue_service)
+    queue_service: ArchiveEngine = Depends(get_queue_service)
 ):
     """Get real-time detailed sync progress for a comic."""
-    task = queue_service.get_progress(provider_id, comic_id)
+    task = await queue_service.get_progress(provider_id, comic_id)
     if not task:
         raise HTTPException(status_code=404, detail="No progress found for comic")
     return task

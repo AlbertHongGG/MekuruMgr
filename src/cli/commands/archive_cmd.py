@@ -4,7 +4,7 @@ from rich.console import Console
 
 from src.core.config import app_settings
 from src.application.comic_manager import ComicManager
-from src.application.queue_service import DownloadQueueService
+from src.application.archive_engine import ArchiveEngine
 from src.storage.factory import StorageFactory
 from src.cli.views import archive_view
 from src.domain.models.archive import TaskStatus
@@ -14,10 +14,10 @@ from src.domain.exceptions import AppBaseError
 archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete, Queue)")
 console = Console()
 
-def get_queue_service() -> DownloadQueueService:
+def get_queue_service() -> ArchiveEngine:
     provider = StorageFactory.get_provider()
     manager = ComicManager()
-    return DownloadQueueService(
+    return ArchiveEngine(
         manager=manager,
         library_storage=provider.get_library_storage(),
         task_storage=provider.get_task_storage(),
@@ -51,22 +51,16 @@ def track_comic(
         
     archive_view.render_track_success(archived)
 
-async def _sync_and_wait(qs: DownloadQueueService, provider_id: str, comic_id: str):
+async def _sync_and_wait(qs: ArchiveEngine, provider_id: str, comic_id: str):
     task = await qs.submit_sync(provider_id, comic_id)
-    qs.start()
+    await qs.start()
     
     task_id = f"{provider_id}::{comic_id}"
-    
-    # Simple polling for CLI progress display
-    from src.cli.components.progress import RichProgressObserver
-    # Note: RichProgressObserver needs to be adapted to read from TaskStatus. 
-    # For now, we will just use a generic spinner or simple print loop, 
-    # since the original observer was event-based.
     
     console.print(f"[cyan]Starting sync for {comic_id}...[/cyan]")
     try:
         while True:
-            current = qs.get_progress(provider_id, comic_id)
+            current = await qs.get_progress(provider_id, comic_id)
             if not current:
                 break
                 
@@ -76,14 +70,13 @@ async def _sync_and_wait(qs: DownloadQueueService, provider_id: str, comic_id: s
                     console.print(f"[red]Error: {current.error_message}[/red]")
                 break
                 
-            # Print minimal progress (e.g., how many chapters done)
             comp = current.completed_chapters
             tot = current.total_chapters
             console.print(f"Progress: {comp}/{tot} chapters completed...", end="\r")
             
             await asyncio.sleep(1)
     except asyncio.CancelledError:
-        qs.pause_task(task_id)
+        await qs.pause_task_async(task_id)
         console.print("\n[yellow]Sync paused by user.[/yellow]")
     finally:
         await qs.stop()
@@ -105,7 +98,7 @@ def sync_comic(
     try:
         asyncio.run(_sync_and_wait(qs, provider_id, comic_id))
     except KeyboardInterrupt:
-        qs.pause_task(f"{provider_id}::{comic_id}")
+        asyncio.run(qs.pause_task_async(f"{provider_id}::{comic_id}"))
         console.print("\n[bold yellow]Sync manually paused. Run sync again to resume.[/bold yellow]")
 
 @archive_app.command(name="pause")
@@ -116,7 +109,8 @@ def pause_comic(
     """Pause an active sync task."""
     provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
-    if qs.pause_task(f"{provider_id}::{comic_id}"):
+    success = asyncio.run(qs.pause_task_async(f"{provider_id}::{comic_id}"))
+    if success:
         console.print(f"[green]Task paused: {comic_id}[/green]")
     else:
         console.print(f"[red]Task not found or cannot be paused: {comic_id}[/red]")
@@ -129,7 +123,8 @@ def resume_comic(
     """Resume a paused sync task."""
     provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
-    if qs.resume_task(f"{provider_id}::{comic_id}"):
+    success = asyncio.run(qs.resume_task_async(f"{provider_id}::{comic_id}"))
+    if success:
         console.print(f"[green]Task queued for resume: {comic_id}[/green]")
         console.print("Run 'sync' to start processing or let the server handle it.")
     else:
@@ -139,15 +134,22 @@ def resume_comic(
 def list_archives():
     """List all locally tracked comics."""
     qs = get_queue_service()
-    comics = qs.library_storage.list_comics()
+    comics = asyncio.run(qs.library_storage.list_comics())
     archive_view.render_archive_list(comics)
 
 @archive_app.command(name="queue")
 def list_queue():
     """List all tasks in the download queue."""
     qs = get_queue_service()
-    tasks = qs.task_storage.list_tasks()
+    tasks = asyncio.run(qs.task_storage.list_tasks())
     archive_view.render_task_list(tasks)
+
+async def _delete_archive(qs: ArchiveEngine, provider_id: str, comic_id: str):
+    await qs.library_storage.delete_comic(provider_id, comic_id)
+    await qs.media_storage.delete_media(provider_id, comic_id)
+    task_id = f"{provider_id}::{comic_id}"
+    await qs.cancel_task_async(task_id)
+    await qs.task_storage.delete_task(task_id)
 
 @archive_app.command(name="delete")
 def delete_archive(
@@ -158,13 +160,7 @@ def delete_archive(
     provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
     try:
-        qs.library_storage.delete_comic(provider_id, comic_id)
-        qs.media_storage.delete_media(provider_id, comic_id)
-        
-        task_id = f"{provider_id}::{comic_id}"
-        qs.cancel_task(task_id)
-        qs.task_storage.delete_task(task_id)
-        
+        asyncio.run(_delete_archive(qs, provider_id, comic_id))
         archive_view.render_delete_success(comic_id)
     except Exception as e:
         archive_view.render_error(str(e))

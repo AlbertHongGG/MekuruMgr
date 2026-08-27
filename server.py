@@ -15,7 +15,7 @@ from src.server.library import library_router
 
 # --- Startup & Setup ---
 
-from src.application.queue_service import DownloadQueueService
+from src.application.archive_engine import ArchiveEngine
 from src.application.comic_manager import ComicManager
 
 @asynccontextmanager
@@ -29,15 +29,15 @@ async def lifespan(app: FastAPI):
     registry.load_all_providers()
     logger.info(f"Providers loaded: {len(registry.get_all())}")
     
-    # Initialize Queue Service
+    # Initialize Archive Engine
     provider = StorageFactory.get_provider()
-    app.state.queue_service = DownloadQueueService(
+    app.state.queue_service = ArchiveEngine(
         manager=ComicManager(),
         library_storage=provider.get_library_storage(),
         task_storage=provider.get_task_storage(),
         media_storage=provider.get_media_storage()
     )
-    app.state.queue_service.start()
+    await app.state.queue_service.start()
     
     yield
     # Shutdown

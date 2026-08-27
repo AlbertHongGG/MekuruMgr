@@ -1,4 +1,5 @@
 import typer
+import asyncio
 
 from src.core.config import app_settings
 from src.application.library_service import LibraryService
@@ -13,7 +14,6 @@ library_app = typer.Typer(help="Read and access locally downloaded comics")
 def get_cli_service() -> LibraryService:
     provider = StorageFactory.get_provider()
     media_storage = provider.get_media_storage()
-    # Assume media_storage has a data_dir attribute (true for LocalMediaStorage)
     base_file_url = f"file:///{media_storage.data_dir.absolute().as_posix()}/"
     return LibraryService(
         library_storage=provider.get_library_storage(),
@@ -34,15 +34,23 @@ def resolve_provider(provider_id: str) -> str:
 def explore_library():
     """Explore all available comics in the local library."""
     service = get_cli_service()
-    comics = service.list_comics()
+    comics = asyncio.run(service.list_comics())
     library_view.render_library_list(comics)
 
 @library_app.command(name="search")
 def search_library(keyword: str = typer.Argument(..., help="Keyword to search in library")):
     """Search for comics in the local library."""
     service = get_cli_service()
-    comics = service.search_comics(keyword)
+    comics = asyncio.run(service.search_comics(keyword))
     library_view.render_library_list(comics, title=f"Local Search Results: '{keyword}'")
+
+async def _show_library_comic(service: LibraryService, provider_id: str, comic_id: str):
+    try:
+        detail = await service.get_comic_detail(provider_id, comic_id)
+        chapters = await service.get_comic_chapters(provider_id, comic_id)
+        library_view.render_library_detail(detail, chapters)
+    except AppBaseError as e:
+        rprint(f"[bold red]Error:[/] {e}")
 
 @library_app.command(name="show")
 def show_library_comic(
@@ -52,13 +60,7 @@ def show_library_comic(
     """Show details and available chapters for a specific comic."""
     provider_id = resolve_provider(provider_id)
     service = get_cli_service()
-    
-    try:
-        detail = service.get_comic_detail(provider_id, comic_id)
-        chapters = service.get_comic_chapters(provider_id, comic_id)
-        library_view.render_library_detail(detail, chapters)
-    except AppBaseError as e:
-        rprint(f"[bold red]Error:[/] {e}")
+    asyncio.run(_show_library_comic(service, provider_id, comic_id))
 
 @library_app.command(name="read")
 def read_library_chapter(
@@ -70,8 +72,11 @@ def read_library_chapter(
     provider_id = resolve_provider(provider_id)
     service = get_cli_service()
     
-    try:
-        chapter_data = service.get_chapter_images(provider_id, comic_id, chapter_id)
-        library_view.render_chapter_read(chapter_data)
-    except AppBaseError as e:
-        rprint(f"[bold red]Error:[/] {e}")
+    async def _read():
+        try:
+            chapter_data = await service.get_chapter_images(provider_id, comic_id, chapter_id)
+            library_view.render_chapter_read(chapter_data)
+        except AppBaseError as e:
+            rprint(f"[bold red]Error:[/] {e}")
+            
+    asyncio.run(_read())

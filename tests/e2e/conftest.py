@@ -160,7 +160,7 @@ def mock_library(current_test_info):
         cover_url="http://example.com/cover.jpg",
         local_path=f"{provider_id}/{comic_id}"
     )
-    provider.get_library_storage().save_comic(lib_comic)
+    asyncio.run(provider.get_library_storage().save_comic(lib_comic))
     
     task = DownloadTask(
         task_id=f"{provider_id}::{comic_id}",
@@ -181,7 +181,7 @@ def mock_library(current_test_info):
             )
         }
     )
-    provider.get_task_storage().save_task(task)
+    asyncio.run(provider.get_task_storage().save_task(task))
     
     media_storage = provider.get_media_storage()
     asyncio.run(media_storage.save_image(provider_id, comic_id, "cover", 0, b"fake_cover", "image/jpeg"))
@@ -190,6 +190,6 @@ def mock_library(current_test_info):
     
     yield {"provider_id": original_provider_id, "comic_id": comic_id, "chapter_id": "ch1"}
     
-    provider.get_library_storage().delete_comic(provider_id, comic_id)
-    provider.get_task_storage().delete_task(task.task_id)
-    media_storage.delete_media(provider_id, comic_id)
+    asyncio.run(provider.get_library_storage().delete_comic(provider_id, comic_id))
+    asyncio.run(provider.get_task_storage().delete_task(task.task_id))
+    asyncio.run(media_storage.delete_media(provider_id, comic_id))
