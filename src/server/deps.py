@@ -1,10 +1,17 @@
-from fastapi import HTTPException
+from fastapi import Request, Depends, HTTPException
 from src.core.registry import registry
-from src.domain.exceptions import AppBaseError
 
-def resolve_provider_id(provider_id: str) -> str:
-    """FastAPI Dependency to resolve provider aliases to their primary ID."""
+def get_container(request: Request):
+    return request.app.state.container
+
+def get_comic_manager(request: Request):
+    return request.app.state.container.comic_manager
+
+def get_library_service(request: Request):
+    return request.app.state.container.library_service
+
+def resolve_provider(provider_id: str) -> str:
     try:
         return registry.resolve_id(provider_id)
-    except AppBaseError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

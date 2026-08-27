@@ -21,9 +21,10 @@ def test_archive_cli_flow(provider, keyword, comic_id, cli_helper: CliTestHelper
     
     # 3. Queue 
     # To test queue rendering with data without blocking on sync, we can manually inject a mock task
-    from src.storage.factory import StorageFactory
+    
     from src.domain.models.archive import DownloadTask, TaskStatus
-    ts = StorageFactory.get_provider().get_task_storage()
+    from src.core.container import AppContainer
+    ts = AppContainer().storage_factory.get_task_storage()
     mock_task = DownloadTask(
         task_id=f"{provider}::{comic_id}",
         provider_id=provider,
@@ -32,7 +33,8 @@ def test_archive_cli_flow(provider, keyword, comic_id, cli_helper: CliTestHelper
         cover_url="mock_cover.jpg",
         status=TaskStatus.QUEUED
     )
-    ts.save_task(mock_task)
+    import asyncio
+    asyncio.run(ts.save_task(mock_task))
     
     out = cli_helper.invoke("List Queue", ["archive", "queue"])
     assert "Download Task Queue" in out

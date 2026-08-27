@@ -19,6 +19,14 @@ class BaseComicProvider(ABC):
         """Alternative identifiers for this provider (e.g., ['comicwf']). Defaults to empty list."""
         return []
 
+    @classmethod
+    def get_config_class(cls) -> Any:
+        """
+        Optional: Return the pydantic settings class for this provider's configuration.
+        This allows dynamic generation of environment variables and DI.
+        """
+        return None
+
     def add_api_hook(self, hook: Any) -> None:
         """
         Add an interceptor hook to the underlying HTTP clients.

@@ -134,4 +134,14 @@ class WebtoonProvider(BaseComicProvider):
         content_type = response.headers.get('content-type', '')
         return response.content, content_type
 
-registry.register(WebtoonProvider)
+
+# Legacy compatibility for registry
+_temp_instance = WebtoonProvider()
+_provider_id = _temp_instance.provider_id
+_provider_id = str(_provider_id.value) if hasattr(_provider_id, 'value') else str(_provider_id)
+registry.register(
+    provider_id=_provider_id,
+    provider_class=WebtoonProvider,
+    aliases=_temp_instance.aliases
+)
+

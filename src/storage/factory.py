@@ -2,9 +2,8 @@ from enum import Enum
 import logging
 from src.storage.core.provider import IStorageProvider
 from src.storage.engines.json.provider import JsonStorageProvider
-
-from typing import Optional
-from src.core.config import app_settings
+from src.storage.engines.sqlite.provider import SqliteStorageProvider
+from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 
 logger = logging.getLogger(__name__)
 
@@ -13,23 +12,30 @@ class StorageEngine(str, Enum):
     SQLITE = "sqlite"
 
 class StorageFactory:
-    _providers = {}
+    def __init__(self, config):
+        self.config = config
+        self._provider = self._create_provider()
 
-    @classmethod
-    def get_provider(cls, engine: Optional[StorageEngine] = None) -> IStorageProvider:
-        if engine is None:
-            # Fallback to json if setting is somehow invalid
-            engine_str = app_settings.storage_engine.lower()
-            engine = StorageEngine(engine_str) if engine_str in [e.value for e in StorageEngine] else StorageEngine.JSON
-            
-        if engine not in cls._providers:
-            if engine == StorageEngine.JSON:
-                cls._providers[engine] = JsonStorageProvider()
-                logger.info(f"Storage Provider Initialized: {engine.value}")
-            elif engine == StorageEngine.SQLITE:
-                from src.storage.engines.sqlite.provider import SqliteStorageProvider
-                cls._providers[engine] = SqliteStorageProvider()
-                logger.info(f"Storage Provider Initialized: {engine.value}")
-            else:
-                raise ValueError(f"Unknown storage engine: {engine}")
-        return cls._providers[engine]
+    def _create_provider(self) -> IStorageProvider:
+        engine = self.config.engine
+        data_dir = self.config.data_dir
+        
+        if engine == StorageEngine.JSON:
+            provider = JsonStorageProvider(data_dir=data_dir)
+            logger.info(f"Storage Provider Initialized: {StorageEngine.JSON.value}")
+            return provider
+        elif engine == StorageEngine.SQLITE:
+            provider = SqliteStorageProvider(data_dir=data_dir)
+            logger.info(f"Storage Provider Initialized: {StorageEngine.SQLITE.value}")
+            return provider
+        else:
+            raise ValueError(f"Unsupported storage engine: {engine}")
+
+    def get_library_storage(self) -> ILibraryStorage:
+        return self._provider.get_library_storage()
+
+    def get_task_storage(self) -> ITaskStorage:
+        return self._provider.get_task_storage()
+
+    def get_media_storage(self) -> IMediaStorage:
+        return self._provider.get_media_storage()

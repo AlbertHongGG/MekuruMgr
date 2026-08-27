@@ -1,28 +1,34 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, BaseModel
+
+class ServerConfig(BaseModel):
+    host: str = Field(default="127.0.0.1", description="API Server IP")
+    port: int = Field(default=8000, description="API Server Port")
+
+class StorageConfig(BaseModel):
+    engine: str = Field(default="sqlite", description="Storage engine (sqlite or json)")
+    data_dir: str = Field(default="./data", description="Storage directory")
+
+class EngineConfig(BaseModel):
+    worker_count: int = Field(default=5, description="Download worker count")
+    max_concurrent_tasks: int = Field(default=5, description="Max concurrent downloads")
 
 class AppConfig(BaseSettings):
     """
-    Global Application Configuration.
-    Reads from .env using the APP_ prefix.
+    Root configuration for the application.
     """
-    model_config = SettingsConfigDict(env_prefix="APP_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="APP_", 
+        env_file=os.environ.get("ENV_FILE", ".env"), 
+        env_file_encoding="utf-8", 
+        extra="ignore",
+        env_nested_delimiter="__"
+    )
 
-    # The default provider to use if none is specified
-    default_provider: str = Field(default="comicwifi")
-    
-    # The default comic ID to use for testing/default CLI commands
-    default_comic_id: str = Field(default="7e68b404b74ffff98a9b77d4f24abefe")
-    
-    # Server settings
-    host: str = Field(default="127.0.0.1")
-    port: int = Field(default=8000)
-    
-    # Environment
-    debug: bool = Field(default=False)
-    
-    # Storage
-    storage_engine: str = Field(default="json")
-    data_dir: str = Field(default="data")
+    debug: bool = Field(default=False, description="Enable debug mode")
+    default_provider: str = Field(default="comicwifi", description="Default provider")
 
-app_settings = AppConfig()
+    server: ServerConfig = Field(default_factory=ServerConfig)
+    storage: StorageConfig = Field(default_factory=StorageConfig)
+    engine: EngineConfig = Field(default_factory=EngineConfig)

@@ -75,4 +75,4 @@ class ComicWifiConfig(BaseSettings):
             "accept-encoding": "gzip",
         }
 
-settings = ComicWifiConfig()
+

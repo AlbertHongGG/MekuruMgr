@@ -3,7 +3,6 @@ import os
 from src.storage.core.provider import IStorageProvider
 from src.storage.core.archive_interface import ILibraryStorage, ITaskStorage, IMediaStorage
 from src.storage.engines.json.archive_repo import JsonLibraryStorage, JsonTaskStorage, LocalMediaStorage
-from src.core.config import app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +11,11 @@ class JsonStorageProvider(IStorageProvider):
     Provides JSON-based implementations for all storage repositories.
     Manages singletons to ensure only one instance of each repository exists.
     """
-    def __init__(self):
+    def __init__(self, data_dir: str):
         self._library_repo = None
         self._task_repo = None
         self._media_repo = None
-        self.data_dir = app_settings.data_dir
+        self.data_dir = data_dir
 
     def get_library_storage(self) -> ILibraryStorage:
         if self._library_repo is None:

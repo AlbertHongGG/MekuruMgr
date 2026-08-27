@@ -32,9 +32,9 @@ class SqliteLibraryStorage(ILibraryStorage):
             await db.commit()
 
     async def _ensure_init(self):
-        if not self._init_task:
-            self._init_task = self._init_db()
-        await self._init_task
+        if not hasattr(self, '_initialized') or not self._initialized:
+            await self._init_db()
+            self._initialized = True
 
     async def get_comic(self, provider_id: str, comic_id: str) -> Optional[LibraryComic]:
         await self._ensure_init()
@@ -116,9 +116,9 @@ class SqliteTaskStorage(ITaskStorage):
             await db.commit()
 
     async def _ensure_init(self):
-        if not self._init_task:
-            self._init_task = self._init_db()
-        await self._init_task
+        if not hasattr(self, '_initialized') or not self._initialized:
+            await self._init_db()
+            self._initialized = True
 
     async def get_task(self, task_id: str) -> Optional[DownloadTask]:
         await self._ensure_init()

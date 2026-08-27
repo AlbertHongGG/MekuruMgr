@@ -48,7 +48,7 @@ class ConflictProvider(BaseComicProvider):
 
     @property
     def aliases(self) -> list[str]:
-        return ["d1"] # Conflicts with dummy1
+        return ["d1", "dummy_one"] # Conflicts with dummy1
 
     @property
     def provider_name(self) -> str:
@@ -62,29 +62,29 @@ class ConflictProvider(BaseComicProvider):
 
 def test_registry_register_and_get():
     registry = ProviderRegistry()
-    registry.register(DummyProvider1)
+    registry.register(provider_id="dummy1", provider_class=DummyProvider1, aliases=["d1", "dummy_one"])
     
     # Check primary ID
-    p1 = registry.get_provider("dummy1")
-    assert p1.provider_id == "dummy1"
+    p1 = registry.get_provider_class("dummy1")
+    assert p1 == DummyProvider1
     
     # Check aliases
-    p1_alias1 = registry.get_provider("d1")
+    p1_alias1 = registry.get_provider_class("d1")
     assert p1_alias1 is p1
     
-    p1_alias2 = registry.get_provider("dummy_one")
+    p1_alias2 = registry.get_provider_class("dummy_one")
     assert p1_alias2 is p1
 
 def test_registry_not_found():
     registry = ProviderRegistry()
     with pytest.raises(AppBaseError):
-        registry.get_provider("unknown")
+        registry.get_provider_class("unknown")
 
 def test_registry_conflict():
     registry = ProviderRegistry()
-    registry.register(DummyProvider1)
+    registry.register(provider_id="dummy1", provider_class=DummyProvider1, aliases=["d1", "dummy_one"])
     
     with pytest.raises(AppBaseError) as exc_info:
-        registry.register(ConflictProvider)
+        registry.register("conflict", ConflictProvider, ["d1", "dummy_one"])
         
     assert "Provider alias collision" in str(exc_info.value)

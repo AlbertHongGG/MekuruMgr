@@ -6,7 +6,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from src.domain.exceptions import NetworkError, ApiLogicError
 from src.core.http_client import BaseHttpClient
 from src.providers.comicwifi.auth import ComicWifiAuth
-from src.providers.comicwifi.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +14,17 @@ class ComicWifiHttpClient(BaseHttpClient):
     Core HTTP Client wrapper.
     Handles session management, auth injection, and error catching.
     """
-    def __init__(self):
+    def __init__(self, config=None):
+        if not config:
+            from src.providers.comicwifi.config import ComicWifiConfig
+            config = ComicWifiConfig()
         super().__init__(
             provider_id="comicwifi",
-            base_url=settings.base_url,
+            base_url=config.base_url,
             verify=True
         )
         self.auth = ComicWifiAuth()
-        self.client.headers.update(settings.http_headers)
+        self.client.headers.update(config.http_headers)
         self.client.auth = self.auth
 
     def close(self):

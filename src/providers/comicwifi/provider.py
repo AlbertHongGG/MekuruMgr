@@ -19,9 +19,18 @@ class ComicWifiProvider(BaseComicProvider):
     and maps the specific JSON responses back to standardized models.
     """
     
-    def __init__(self, http_client=None):
-        self._http = http_client or ComicWifiHttpClient()
+
+    @classmethod
+    def get_config_class(cls):
+        from src.providers.comicwifi.config import ComicWifiConfig
+        return ComicWifiConfig
+
+    def __init__(self, config=None, http_client=None):
+        from src.providers.comicwifi.config import ComicWifiConfig
+        self.config = config or ComicWifiConfig()
+        self._http = http_client or ComicWifiHttpClient(self.config)
         self._api = ComicApiClient(self._http)
+
 
     def add_api_hook(self, hook: Any) -> None:
         self._http.add_hook(hook)
@@ -117,4 +126,14 @@ class ComicWifiProvider(BaseComicProvider):
             raise ApiLogicError(f"Failed to explore comics: {str(e)}")
 
 # Register this provider automatically when the module is imported
-registry.register(ComicWifiProvider)
+
+# Legacy compatibility for registry
+_temp_instance = ComicWifiProvider()
+_provider_id = _temp_instance.provider_id
+_provider_id = str(_provider_id.value) if hasattr(_provider_id, 'value') else str(_provider_id)
+registry.register(
+    provider_id=_provider_id,
+    provider_class=ComicWifiProvider,
+    aliases=_temp_instance.aliases
+)
+

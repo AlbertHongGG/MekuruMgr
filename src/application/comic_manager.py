@@ -17,15 +17,18 @@ class ComicManager:
         self._active_provider: Optional[BaseComicProvider] = None
         if default_provider_id:
             self.use(default_provider_id)
+    def resolve_id(self, provider_id: str) -> str:
+        return registry.resolve_id(provider_id)
 
-    def use(self, provider_id: Union[str, BuiltinProvider]) -> "ComicManager":
-        """Switch the active provider dynamically by its ID."""
-        # Enum values in Python are instance of the Enum class. Since BuiltinProvider inherits from str, 
-        # it can be passed directly, but we call str() to ensure the registry gets the pure string key.
-        provider_key = str(provider_id.value if isinstance(provider_id, BuiltinProvider) else provider_id)
-        self._active_provider = registry.get_provider(provider_key)
-        logger.info(f"Switched Provider: [cyan]{self._active_provider.provider_name}[/] (ID: [magenta]{provider_key}[/])")
-        return self
+    def use(self, provider_id: str):
+        resolved_id = self.resolve_id(provider_id)
+        if hasattr(self, '_providers') and resolved_id in self._providers:
+            self._active_provider = self._providers[resolved_id]
+        else:
+            # Fallback for tests not using DI
+            p_class = registry.get_provider_class(resolved_id)
+            self._active_provider = p_class()
+
 
     @property
     def provider(self) -> BaseComicProvider:
@@ -48,10 +51,11 @@ class ComicManager:
         """Fetch all images for a specific chapter using the active provider."""
         # Removing spammy log here since progress bar will handle it
         return self.provider.get_chapter_images(comic_id, chapter_id)
-
     def get_available_providers(self) -> List[str]:
-        """List all available providers."""
-        return registry.list_providers()
+        if hasattr(self, '_providers'):
+            return list(self._providers.keys())
+        return list(registry.get_all_classes().keys())
+
 
     def search_comics(self, keyword: str, page: int = 1, page_size: int = 30) -> List[ComicSearchResult]:
         """Search for comics using the active provider."""

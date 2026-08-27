@@ -10,66 +10,58 @@ logger = logging.getLogger(__name__)
 class ProviderRegistry:
     """
     Central registry for all comic providers.
-    Uses the Singleton pattern to keep a single active registry.
+    Uses the Singleton pattern to keep a single active registry of CLASSES.
     """
     def __init__(self):
-        self._providers: Dict[str, BaseComicProvider] = {}
+        self._provider_classes: Dict[str, Type[BaseComicProvider]] = {}
         self._aliases: Dict[str, str] = {}
 
-    def register(self, provider_class: Type[BaseComicProvider]):
+    def register(self, provider_id: str, provider_class: Type[BaseComicProvider], aliases: list[str] = None):
         """Register a provider class with the system."""
-        provider = provider_class()
-        primary_id = str(provider.provider_id)
-        if hasattr(provider.provider_id, "value"):
-            primary_id = str(provider.provider_id.value)
+        aliases = aliases or []
         
-        if primary_id in self._providers:
-            raise AppBaseError(f"Provider ID collision: '{primary_id}' is already registered.")
+        if provider_id in self._provider_classes:
+            raise AppBaseError(f"Provider ID collision: '{provider_id}' is already registered.")
             
-        self._providers[primary_id] = provider
+        self._provider_classes[provider_id] = provider_class
         
         # Register aliases
-        for alias in provider.aliases:
-            if alias in self._providers:
+        for alias in aliases:
+            if alias in self._provider_classes:
                 raise AppBaseError(f"Provider alias collision: '{alias}' conflicts with an existing provider ID.")
             if alias in self._aliases:
                 raise AppBaseError(f"Provider alias collision: '{alias}' is already registered by '{self._aliases[alias]}'.")
-            self._aliases[alias] = primary_id
+            self._aliases[alias] = provider_id
             
-        logger.info(f"Provider Registered: {provider.provider_name} (ID: {primary_id}, Aliases: {provider.aliases})")
+        logger.info(f"Provider Registered: {provider_id} (Aliases: {aliases})")
 
     def resolve_id(self, provider_id: str) -> str:
         """Resolve a given provider ID or alias to the primary provider ID."""
-        if provider_id in self._providers:
+        if provider_id in self._provider_classes:
             return provider_id
         if provider_id in self._aliases:
             return self._aliases[provider_id]
         raise AppBaseError(f"Provider '{provider_id}' is not registered.")
 
-    def get_provider(self, provider_id: str) -> BaseComicProvider:
-        """Retrieve an instantiated provider by its ID or alias."""
+    def get_provider_class(self, provider_id: str) -> Type[BaseComicProvider]:
+        """Retrieve a provider class by its ID or alias."""
         primary_id = self.resolve_id(provider_id)
-        return self._providers[primary_id]
+        return self._provider_classes[primary_id]
 
-    def get_all(self) -> Dict[str, BaseComicProvider]:
-        return self._providers.copy()
+    def get_all_classes(self) -> Dict[str, Type[BaseComicProvider]]:
+        return self._provider_classes.copy()
 
     def load_all_providers(self):
         """
         Dynamically discover and import all providers in the src.providers package.
-        This removes the need for manual imports in main entrypoints.
         """
-        # Get the path to src/providers
         providers_dir = Path(__file__).parent.parent / "providers"
         
-
         if not providers_dir.exists() or not providers_dir.is_dir():
             return
             
-        # Iterate over all directories in src/providers
         for provider_path in providers_dir.iterdir():
             if provider_path.is_dir() and not provider_path.name.startswith("_"):
-                # Try to import the 'provider.py' module inside the directory
                 module_name = f"src.providers.{provider_path.name}.provider"
                 try:
                     importlib.import_module(module_name)

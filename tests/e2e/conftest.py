@@ -6,7 +6,7 @@ import time
 from urllib.parse import urlparse
 
 # Force test isolation BEFORE any app imports
-os.environ["APP_DATA_DIR"] = os.path.join(os.getcwd(), "test_outputs", "data")
+os.environ["APP_STORAGE__DATA_DIR"] = os.path.join(os.getcwd(), "test_outputs", "data")
 
 
 from cli import app as cli_app
@@ -28,7 +28,7 @@ def setup_test_environment():
             print(f"Warning: could not fully clear test_outputs: {e}")
             
     # Re-create isolation data dir
-    os.makedirs(os.environ["APP_DATA_DIR"], exist_ok=True)
+    os.makedirs(os.environ["APP_STORAGE__DATA_DIR"], exist_ok=True)
         
     registry.load_all_providers()
     
@@ -57,8 +57,8 @@ def setup_test_environment():
         except Exception as e:
             print(f"Failed to dump json: {e}")
             
-    for p_id, provider in registry.get_all().items():
-        provider.add_api_hook(_dump_json_hook)
+    for p_id, provider_class in registry.get_all_classes().items():
+        pass # We mock hooks globally later_dump_json_hook)
         
     yield
 
@@ -127,7 +127,7 @@ def server_helper(test_logger):
 @pytest.fixture
 def mock_library(current_test_info):
     """Inject a dummy comic into the isolated data_dir for library tests."""
-    from src.storage.factory import StorageFactory
+    
     from src.domain.models.archive import LibraryComic, DownloadTask, ChapterTask, TaskStatus
     import asyncio
     
@@ -148,7 +148,9 @@ def mock_library(current_test_info):
     if comic_id == "unknown_comic":
         comic_id = "test_comic"
     
-    provider = StorageFactory.get_provider()
+    from src.storage.engines.sqlite.provider import SqliteStorageProvider
+    import os
+    provider = SqliteStorageProvider(os.environ["APP_STORAGE__DATA_DIR"])
     
     lib_comic = LibraryComic(
         provider_id=provider_id,

@@ -1,32 +1,36 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from typing import List
+import urllib.parse
 
-from src.application.library_service import LibraryService
-from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem
+from src.core.interfaces import ILibraryService
+from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem, LibraryComic
 from src.domain.exceptions import AppBaseError
-from src.storage.factory import StorageFactory
-from src.server.deps import resolve_provider_id
+from src.server.deps import get_library_service, get_container, resolve_provider
 
 library_router = APIRouter(prefix="/api/v1/library", tags=["Library"])
 
-def get_service(request: Request) -> LibraryService:
-    provider = StorageFactory.get_provider()
-    # The new absolute API URL for the media proxy
-    base_media_url = str(request.base_url) + "api/v1/library/media/"
-    return LibraryService(
-        library_storage=provider.get_library_storage(),
-        task_storage=provider.get_task_storage(),
-        media_storage=provider.get_media_storage(),
-        base_media_url=base_media_url
-    )
+def _format_cover(request: Request, cover_url: str) -> str:
+    if not cover_url or cover_url.startswith("http"):
+        return cover_url
+    parts = cover_url.split('/')
+    encoded_parts = [urllib.parse.quote(p) for p in parts]
+    return f"{request.base_url}api/v1/library/media/" + "/".join(encoded_parts)
+
+@library_router.get("/", response_model=List[LocalComicItem])
+async def explore_library(
+    request: Request,
+    library_service: ILibraryService = Depends(get_library_service)
+):
+    comics = await library_service.list_comics()
+    for c in comics:
+        c.cover_url = _format_cover(request, c.cover_url)
+    return comics
 
 @library_router.get("/media/{path:path}")
-async def get_archived_media(path: str):
-    """Serve an archived media file using the storage engine."""
+async def get_archived_media(path: str, container = Depends(get_container)):
     try:
-        provider = StorageFactory.get_provider()
-        stream_gen, content_type = await provider.get_media_storage().get_image_stream(path)
+        stream_gen, content_type = await container.media_storage.get_image_stream(path)
         return StreamingResponse(stream_gen, media_type=content_type)
     except AppBaseError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -34,51 +38,81 @@ async def get_archived_media(path: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/search", response_model=List[LocalComicItem])
-async def search_library_comics(keyword: str, request: Request):
-    """Search locally available comics by keyword."""
+async def search_library_comics(
+    request: Request,
+    keyword: str,
+    library_service: ILibraryService = Depends(get_library_service)
+):
     try:
-        service = get_service(request)
-        return await service.search_comics(keyword)
+        comics = await library_service.search_comics(keyword)
+        for c in comics:
+            c.cover_url = _format_cover(request, c.cover_url)
+        return comics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/explore", response_model=List[LocalComicItem])
-async def explore_library_comics(request: Request):
-    """Explore all locally available comics (Alias for list)."""
+async def explore_library_comics(
+    request: Request,
+    library_service: ILibraryService = Depends(get_library_service)
+):
     try:
-        service = get_service(request)
-        return await service.list_comics()
+        comics = await library_service.list_comics()
+        for c in comics:
+            c.cover_url = _format_cover(request, c.cover_url)
+        return comics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}", response_model=LocalComicDetail)
-async def get_library_comic_detail(comic_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
-    """Get comic details and only the COMPLETED chapters."""
+async def get_library_comic_detail(
+    request: Request,
+    comic_id: str, 
+    provider_id: str = Depends(resolve_provider),
+    library_service: ILibraryService = Depends(get_library_service)
+):
     try:
-        service = get_service(request)
-        return await service.get_comic_detail(provider_id, comic_id)
+        detail = await library_service.get_comic_detail(provider_id, comic_id)
+        detail.cover_url = _format_cover(request, detail.cover_url)
+        return detail
     except AppBaseError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}/chapters", response_model=List[LocalChapterItem])
-async def get_library_comic_chapters(comic_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
-    """Get only the COMPLETED chapters for a comic."""
+async def get_library_comic_chapters(
+    comic_id: str, 
+    provider_id: str = Depends(resolve_provider),
+    library_service: ILibraryService = Depends(get_library_service)
+):
     try:
-        service = get_service(request)
-        return await service.get_comic_chapters(provider_id, comic_id)
+        return await library_service.get_comic_chapters(provider_id, comic_id)
     except AppBaseError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @library_router.get("/{provider_id}/{comic_id}/chapters/{chapter_id}", response_model=LocalChapterImages)
-async def get_library_chapter_images(comic_id: str, chapter_id: str, request: Request, provider_id: str = Depends(resolve_provider_id)):
-    """Get the full image URLs for a fully downloaded chapter."""
+async def get_library_chapter_images(
+    request: Request,
+    comic_id: str, 
+    chapter_id: str, 
+    provider_id: str = Depends(resolve_provider),
+    library_service: ILibraryService = Depends(get_library_service)
+):
     try:
-        service = get_service(request)
-        return await service.get_chapter_images(provider_id, comic_id, chapter_id)
+        chapter_data = await library_service.get_chapter_images(provider_id, comic_id, chapter_id)
+        
+        base_url = f"{request.base_url}api/v1/library/media/"
+        formatted_images = []
+        for img in chapter_data.images:
+            parts = img.split('/')
+            encoded_parts = [urllib.parse.quote(p) for p in parts]
+            formatted_images.append(base_url + "/".join(encoded_parts))
+            
+        chapter_data.images = formatted_images
+        return chapter_data
     except AppBaseError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

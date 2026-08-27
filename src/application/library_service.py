@@ -16,19 +16,12 @@ class LibraryService:
     Read-only service for providing clean, consumable comic data.
     Filters out incomplete chapters and transforms internal paths to CDN URLs.
     """
-    def __init__(self, library_storage: ILibraryStorage, task_storage: ITaskStorage, media_storage: IMediaStorage, base_media_url: str = "/media/"):
+    def __init__(self, library_storage: ILibraryStorage, task_storage: ITaskStorage, media_storage: IMediaStorage):
         self.library_storage = library_storage
         self.task_storage = task_storage
         self.media_storage = media_storage
-        self.base_media_url = base_media_url.rstrip("/") + "/"
 
-    def _build_url(self, path: str) -> str:
-        if not path:
-            return ""
-        parts = path.split('/')
-        encoded_parts = [urllib.parse.quote(p) for p in parts]
-        return self.base_media_url + "/".join(encoded_parts)
-        
+
     async def _get_completed_chapters_count(self, provider_id: str, comic_id: str) -> int:
         task = await self.task_storage.get_task(f"{provider_id}::{comic_id}")
         if task:
@@ -45,7 +38,7 @@ class LibraryService:
                 provider_id=c.provider_id,
                 comic_id=c.comic_id,
                 title=c.title,
-                cover_url=self._build_url(c.cover_url),
+                cover_url=c.cover_url,
                 completed_chapters_count=completed_count
             ))
         return items
@@ -63,7 +56,7 @@ class LibraryService:
                 provider_id=c.provider_id,
                 comic_id=c.comic_id,
                 title=c.title,
-                cover_url=self._build_url(c.cover_url),
+                cover_url=c.cover_url,
                 completed_chapters_count=completed_count
             ))
         return items
@@ -81,7 +74,7 @@ class LibraryService:
             author=c.author,
             tags=c.tags,
             description=c.description,
-            cover_url=self._build_url(c.cover_url)
+            cover_url=c.cover_url
         )
 
     async def get_comic_chapters(self, provider_id: str, comic_id: str) -> List[LocalChapterItem]:
@@ -122,7 +115,7 @@ class LibraryService:
         if not relative_paths:
             raise AppBaseError(f"Physical images for chapter {chapter_id} not found.")
 
-        image_urls = [self._build_url(p) for p in relative_paths]
+        image_urls = [p for p in relative_paths]
 
         return LocalChapterImages(
             provider_id=provider_id,
