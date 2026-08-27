@@ -147,11 +147,23 @@ The CLI interface provides three primary command groups: `comic` (remote fetchin
     ```bash
     uv run python cli.py archive sync <comic_id>
     ```
-*   View Archive Health (Shows total downloaded vs pending/failed chapters):
+*   Pause an Active Sync Task:
+    ```bash
+    uv run python cli.py archive pause <comic_id>
+    ```
+*   Resume a Paused Sync Task:
+    ```bash
+    uv run python cli.py archive resume <comic_id>
+    ```
+*   View All Tracked Comics in Archive:
     ```bash
     uv run python cli.py archive list
     ```
-*   Delete Archive:
+*   View Download Task Queue:
+    ```bash
+    uv run python cli.py archive queue
+    ```
+*   Delete Archive (Removes all local files and metadata):
     ```bash
     uv run python cli.py archive delete <comic_id>
     ```
@@ -212,13 +224,16 @@ uv run uvicorn server:app --reload --host 127.0.0.1 --port 8000
 *   `GET /api/v1/comics/{provider_id}/{comic_id}/chapters/{chapter_id}/images`
 
 ### Archival Management API (Writing)
-*   `GET /api/v1/archive/` : View tracking health status.
-*   `GET /api/v1/archive/sync/active` : Get a list of all currently active background sync tasks.
-*   `GET /api/v1/archive/{provider_id}/{comic_id}` : Get metadata for a specific archived comic.
-*   `GET /api/v1/archive/{provider_id}/{comic_id}/progress` : Get real-time detailed sync progress (active chapters and pages downloaded).
-*   `POST /api/v1/archive/{provider_id}/{comic_id}/track` : Track without downloading.
-*   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger idempotent background incremental sync.
-*   `DELETE /api/v1/archive/{provider_id}/{comic_id}/sync` : Gracefully cancel an active background sync task.
+*   `GET /api/v1/archive/` : List all locally tracked comics metadata.
+*   `GET /api/v1/archive/queue` : Get a list of all active download tasks in the background queue. Includes `comic_title` and `cover_url` for UI display.
+*   `GET /api/v1/archive/{provider_id}/{comic_id}` : Get metadata for a specific tracked comic.
+*   `GET /api/v1/archive/{provider_id}/{comic_id}/progress` : Get real-time detailed sync progress (task status, active chapters, and downloaded pages).
+*   `POST /api/v1/archive/{provider_id}/{comic_id}/track` : Add a comic to the tracking library without downloading chapters.
+*   `POST /api/v1/archive/{provider_id}/{comic_id}/sync` : Trigger idempotent background incremental sync (queues for download).
+*   `POST /api/v1/archive/{provider_id}/{comic_id}/pause` : Pause an active background sync task.
+*   `POST /api/v1/archive/{provider_id}/{comic_id}/resume` : Resume a paused background sync task.
+*   `DELETE /api/v1/archive/{provider_id}/{comic_id}/cancel` : Gracefully cancel an active background sync task.
+*   `DELETE /api/v1/archive/{provider_id}/{comic_id}` : Delete an archived comic and all its downloaded local files.
 
 ### Library Serving API (Reading)
 *   `GET /api/v1/library/explore` : Explore all locally available comics.

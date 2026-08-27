@@ -7,10 +7,14 @@ def test_library_cli_explore(provider, keyword, comic_id, cli_helper: CliTestHel
     """Test library explore command."""
     out = cli_helper.invoke("Explore Library", ["library", "explore"])
     
+    # Extract primary id
+    from src.core.registry import registry
+    primary_id = registry.resolve_id(mock_library["provider_id"])
+    
     assert "Local Comic Library" in out
-    # 這裡因為 comic_id 變得很長，Rich Table 有時會截斷，所以用 [:10]
+    # 這個因為 comic_id 太長在 Rich Table 時會截斷，所以取 [:10]
     assert mock_library["comic_id"][:10] in out
-    assert mock_library["provider_id"] in out
+    assert primary_id in out
 
 @pytest.mark.parametrize("provider, keyword, comic_id", PROVIDERS_TEST_DATA)
 def test_library_cli_search(provider, keyword, comic_id, cli_helper: CliTestHelper, mock_library: dict):

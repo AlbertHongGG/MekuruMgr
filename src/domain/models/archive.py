@@ -23,6 +23,8 @@ class DownloadTask(BaseModel):
     task_id: str  # Format: "provider_id::comic_id"
     provider_id: str
     comic_id: str
+    comic_title: str = ""
+    cover_url: str = ""
     status: TaskStatus = TaskStatus.QUEUED
     chapters: Dict[str, ChapterTask] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.now)

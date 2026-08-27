@@ -57,6 +57,15 @@ def test_archive_server_queue_flow(provider, keyword, comic_id, server_helper: S
             
     assert downloaded_some, f"Task did not download any pages in time."
     
+    # 6.5 Verify Queue API (assert new fields exist)
+    queue_data = server_helper.get("Check Queue", "/api/v1/archive/queue")
+    assert isinstance(queue_data, list)
+    target_task = next((t for t in queue_data if t["comic_id"] == comic_id), None)
+    assert target_task is not None, "Task should be in the queue"
+    assert "comic_title" in target_task
+    assert "cover_url" in target_task
+    assert target_task["comic_title"] != "", "comic_title should not be empty"
+    
     # 7. Check Library List
     lib_list = server_helper.get("List Archives", "/api/v1/archive/")
     assert any(c["comic_id"] == comic_id for c in lib_list)

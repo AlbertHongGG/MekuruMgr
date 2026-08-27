@@ -5,6 +5,7 @@ from src.application.library_service import LibraryService
 from src.storage.factory import StorageFactory
 from src.domain.exceptions import AppBaseError
 from src.cli.views import library_view
+from src.core.registry import registry
 from rich import print as rprint
 
 library_app = typer.Typer(help="Read and access locally downloaded comics")
@@ -20,6 +21,14 @@ def get_cli_service() -> LibraryService:
         media_storage=media_storage,
         base_media_url=base_file_url
     )
+
+def resolve_provider(provider_id: str) -> str:
+    provider_id = provider_id or app_settings.default_provider
+    try:
+        return registry.resolve_id(provider_id)
+    except AppBaseError as e:
+        rprint(f"[bold red]Error:[/] {e}")
+        raise typer.Exit(1)
 
 @library_app.command(name="explore")
 def explore_library():
@@ -41,7 +50,7 @@ def show_library_comic(
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Show details and available chapters for a specific comic."""
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     service = get_cli_service()
     
     try:
@@ -58,7 +67,7 @@ def read_library_chapter(
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Get all image paths for a specific chapter."""
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     service = get_cli_service()
     
     try:

@@ -51,6 +51,7 @@ def render_task_list(tasks: List[DownloadTask]):
     table = Table(title="Download Task Queue", border_style="white")
     table.add_column("Provider", style="cyan")
     table.add_column("Comic ID", style="magenta")
+    table.add_column("Title", style="green")
     table.add_column("Status", style="bold")
     table.add_column("Progress (Chapters)", justify="right")
     table.add_column("Progress (Pages)", justify="right")
@@ -73,6 +74,7 @@ def render_task_list(tasks: List[DownloadTask]):
         table.add_row(
             t.provider_id,
             t.comic_id,
+            t.comic_title or "N/A",
             f"[{status_color}]{t.status.value}[/{status_color}]",
             f"{t.completed_chapters}/{t.total_chapters}",
             page_progress

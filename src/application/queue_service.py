@@ -93,7 +93,7 @@ class DownloadQueueService:
         # Ensure library metadata exists
         library_comic = self.library_storage.get_comic(provider_id, comic_id)
         if not library_comic:
-            await self.track_comic(provider_id, comic_id)
+            library_comic = await self.track_comic(provider_id, comic_id)
 
         task = self.task_storage.get_task(task_id)
         if task:
@@ -102,11 +102,16 @@ class DownloadQueueService:
             task.status = TaskStatus.QUEUED
             task.error_message = None
             task.updated_at = datetime.now()
+            # Update metadata in case it changed
+            task.comic_title = library_comic.title
+            task.cover_url = library_comic.cover_url
         else:
             task = DownloadTask(
                 task_id=task_id,
                 provider_id=provider_id,
                 comic_id=comic_id,
+                comic_title=library_comic.title,
+                cover_url=library_comic.cover_url,
                 status=TaskStatus.QUEUED
             )
             

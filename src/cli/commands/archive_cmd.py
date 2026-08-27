@@ -8,6 +8,8 @@ from src.application.queue_service import DownloadQueueService
 from src.storage.factory import StorageFactory
 from src.cli.views import archive_view
 from src.domain.models.archive import TaskStatus
+from src.core.registry import registry
+from src.domain.exceptions import AppBaseError
 
 archive_app = typer.Typer(help="Manage local comic archives (Track, Sync, Delete, Queue)")
 console = Console()
@@ -22,6 +24,14 @@ def get_queue_service() -> DownloadQueueService:
         media_storage=provider.get_media_storage()
     )
 
+def resolve_provider(provider_id: str) -> str:
+    provider_id = provider_id or app_settings.default_provider
+    try:
+        return registry.resolve_id(provider_id)
+    except AppBaseError as e:
+        archive_view.render_error(str(e))
+        raise typer.Exit(1)
+
 @archive_app.command(name="track")
 def track_comic(
     comic_id: str = typer.Argument(None, help="The ID of the comic to track. Uses env default if omitted."),
@@ -29,7 +39,7 @@ def track_comic(
 ):
     """Add a comic to the local tracking library (fetch metadata only)."""
     comic_id = comic_id or app_settings.default_comic_id
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     if not comic_id:
         archive_view.render_error("No comic ID provided and no default in .env")
         raise typer.Exit(1)
@@ -85,7 +95,7 @@ def sync_comic(
 ):
     """Perform an incremental sync (adds to queue and starts downloading)."""
     comic_id = comic_id or app_settings.default_comic_id
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     if not comic_id:
         archive_view.render_error("No comic ID provided and no default in .env")
         raise typer.Exit(1)
@@ -104,7 +114,7 @@ def pause_comic(
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Pause an active sync task."""
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
     if qs.pause_task(f"{provider_id}::{comic_id}"):
         console.print(f"[green]Task paused: {comic_id}[/green]")
@@ -117,7 +127,7 @@ def resume_comic(
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Resume a paused sync task."""
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
     if qs.resume_task(f"{provider_id}::{comic_id}"):
         console.print(f"[green]Task queued for resume: {comic_id}[/green]")
@@ -145,7 +155,7 @@ def delete_archive(
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Delete a comic from the local archive."""
-    provider_id = provider_id or app_settings.default_provider
+    provider_id = resolve_provider(provider_id)
     qs = get_queue_service()
     try:
         qs.library_storage.delete_comic(provider_id, comic_id)

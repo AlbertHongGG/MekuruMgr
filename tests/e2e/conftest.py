@@ -166,6 +166,8 @@ def mock_library(current_test_info):
         task_id=f"{provider_id}::{comic_id}",
         provider_id=provider_id,
         comic_id=comic_id,
+        comic_title=lib_comic.title,
+        cover_url=lib_comic.cover_url,
         status=TaskStatus.COMPLETED,
         total_chapters=1,
         completed_chapters=1,
