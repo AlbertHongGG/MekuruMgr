@@ -45,7 +45,7 @@ def test_archive_server_queue_flow(provider, keyword, comic_id, server_helper: S
     for _ in range(max_retries):
         time.sleep(1)
         prog = server_helper.get("Poll Progress", f"/api/v1/archive/{provider}/{comic_id}/progress")
-        if prog and prog["status"] == "downloading":
+        if prog and prog["status"] in ["downloading", "completed"]:
             # Check if any chapter has downloaded pages
             for ch in prog.get("chapters", {}).values():
                 if ch.get("downloaded_pages", 0) > 0:

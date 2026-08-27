@@ -1,6 +1,7 @@
+
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from datetime import datetime
 import httpx
 
@@ -39,59 +40,44 @@ class ProgressTracker:
             task = self.tasks.get(task_id)
             if task and chapter_id in task.chapters:
                 task.chapters[chapter_id].downloaded_pages += increment
-                task.updated_at = datetime.now()
                 self.dirty_tasks.add(task_id)
 
-    async def update_chapter_status(self, task_id: str, chapter_id: str, status: TaskStatus, error: str = None, total_pages: int = None):
+    async def update_chapter_status(self, task_id: str, chapter_id: str, status: TaskStatus, error: str = "", total_pages: int = -1):
         async with self._lock:
             task = self.tasks.get(task_id)
             if task and chapter_id in task.chapters:
-                task.chapters[chapter_id].status = status
+                ch = task.chapters[chapter_id]
+                ch.status = status
                 if error:
-                    task.chapters[chapter_id].error_message = error
-                if total_pages is not None:
-                    task.chapters[chapter_id].total_pages = total_pages
-                task.updated_at = datetime.now()
+                    ch.error_message = error
+                if total_pages >= 0:
+                    ch.total_pages = total_pages
                 self.dirty_tasks.add(task_id)
 
-    async def update_task_status(self, task_id: str, status: TaskStatus, error: str = None):
+    async def update_task_status(self, task_id: str, status: TaskStatus, error: str = ""):
         async with self._lock:
             task = self.tasks.get(task_id)
             if task:
                 task.status = status
                 if error:
                     task.error_message = error
-                task.updated_at = datetime.now()
                 self.dirty_tasks.add(task_id)
 
     async def mark_dirty(self, task_id: str):
         async with self._lock:
-            self.dirty_tasks.add(task_id)
+            if task_id in self.tasks:
+                self.dirty_tasks.add(task_id)
 
     async def flush_dirty(self):
-        to_flush = []
         async with self._lock:
-            for tid in list(self.dirty_tasks):
-                if tid in self.tasks:
-                    to_flush.append(self.tasks[tid].model_copy(deep=True))
+            for task_id in list(self.dirty_tasks):
+                task = self.tasks.get(task_id)
+                if task:
+                    await self.task_storage.save_task(task)
             self.dirty_tasks.clear()
-        
-        for task in to_flush:
-            try:
-                await self.task_storage.save_task(task)
-            except Exception as e:
-                logger.error(f"Error flushing task {task.task_id}: {e}")
 
 class ArchiveEngine:
-    def __init__(
-        self, 
-        manager: ComicManager, 
-        library_storage: ILibraryStorage, 
-        task_storage: ITaskStorage, 
-        media_storage: IMediaStorage, 
-        worker_count: int = 5,
-        max_concurrent_tasks: int = 2
-    ):
+    def __init__(self, manager: ComicManager, library_storage: ILibraryStorage, task_storage: ITaskStorage, media_storage: IMediaStorage, worker_count: int = 5, max_concurrent_tasks: int = 3):
         self.manager = manager
         self.library_storage = library_storage
         self.task_storage = task_storage
@@ -104,77 +90,42 @@ class ArchiveEngine:
         self._running = False
         self._main_task = None
         self._flusher_task = None
-        self._workers = []
+        self._workers: List[asyncio.Task] = []
         
         self._active_coordinators: Dict[str, asyncio.Task] = {}
         self._cancellation_events: Dict[str, asyncio.Event] = {}
+        self._state_event = asyncio.Event()
 
     async def start(self):
         if self._running: return
         self._running = True
-        
-        # Recover paused tasks
-        tasks = await self.task_storage.list_tasks()
-        for t in tasks:
-            if t.status == TaskStatus.DOWNLOADING:
-                t.status = TaskStatus.PAUSED
-                await self.task_storage.save_task(t)
-
+        self._main_task = asyncio.create_task(self._coordinator_loop())
         self._flusher_task = asyncio.create_task(self._flush_loop())
         for _ in range(self.worker_count):
-            w = asyncio.create_task(self._page_worker())
-            self._workers.append(w)
-            
-        self._main_task = asyncio.create_task(self._coordinator_loop())
+            self._workers.append(asyncio.create_task(self._page_worker()))
         logger.info(f"Archive Engine started with {self.worker_count} workers.")
 
     async def stop(self):
         self._running = False
-        if self._main_task:
-            self._main_task.cancel()
+        self._state_event.set()
+        
+        for task_id, cancel_event in self._cancellation_events.items():
+            cancel_event.set()
             
-        for event in self._cancellation_events.values():
-            event.set()
-            
-        for _ in range(len(self._workers)):
+        for _ in range(self.worker_count):
             await self.queue.put(None)
             
-        await asyncio.gather(*self._workers, return_exceptions=True)
-        
+        if self._workers:
+            await asyncio.gather(*self._workers, return_exceptions=True)
+            self._workers.clear()
+            
+        if self._main_task:
+            self._main_task.cancel()
         if self._flusher_task:
             self._flusher_task.cancel()
             
         await self.tracker.flush_dirty()
         logger.info("Archive Engine stopped.")
-
-    async def submit_sync(self, provider_id: str, comic_id: str) -> DownloadTask:
-        task_id = f"{provider_id}::{comic_id}"
-        library_comic = await self.library_storage.get_comic(provider_id, comic_id)
-        if not library_comic:
-            library_comic = await self.track_comic(provider_id, comic_id)
-
-        task = await self.task_storage.get_task(task_id)
-        if task:
-            if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
-                return task
-            task.status = TaskStatus.QUEUED
-            task.error_message = None
-            task.updated_at = datetime.now()
-            task.comic_title = library_comic.title
-            task.cover_url = library_comic.cover_url
-        else:
-            task = DownloadTask(
-                task_id=task_id,
-                provider_id=provider_id,
-                comic_id=comic_id,
-                comic_title=library_comic.title,
-                cover_url=library_comic.cover_url,
-                status=TaskStatus.QUEUED
-            )
-            
-        await self.task_storage.save_task(task)
-        logger.info(f"Task submitted: {task_id}")
-        return task
 
     async def track_comic(self, provider_id: str, comic_id: str) -> LocalComic:
         self.manager.use(provider_id)
@@ -211,20 +162,72 @@ class ArchiveEngine:
         except Exception as e:
             logger.error(f"Failed to download cover for {comic_id}: {e}")
 
+    async def submit_sync(self, provider_id: str, comic_id: str) -> DownloadTask:
+        task_id = f"{provider_id}::{comic_id}"
+        library_comic = await self.library_storage.get_comic(provider_id, comic_id)
+        if not library_comic:
+            library_comic = await self.track_comic(provider_id, comic_id)
+
+        task = await self.task_storage.get_task(task_id)
+        if task:
+            if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
+                return task
+            task.status = TaskStatus.QUEUED
+            task.error_message = None
+            task.updated_at = datetime.now()
+            task.comic_title = library_comic.title
+            task.cover_url = library_comic.cover_url
+            
+            # Reset failed chapters
+            for ch in task.chapters.values():
+                if ch.status == TaskStatus.FAILED:
+                    ch.status = TaskStatus.QUEUED
+                    ch.error_message = None
+        else:
+            task = DownloadTask(
+                task_id=task_id,
+                provider_id=provider_id,
+                comic_id=comic_id,
+                comic_title=library_comic.title,
+                cover_url=library_comic.cover_url
+            )
+            
+        await self.task_storage.save_task(task)
+        if task_id in self.tracker.tasks:
+            self.tracker.tasks[task_id] = task
+            
+        self._state_event.set()
+        logger.info(f"Task submitted: {task_id}")
+        return task
+            
+        task.status = TaskStatus.QUEUED
+        task.error_message = None
+        task.updated_at = datetime.now()
+        
+        # Reset failed chapters
+        for ch in task.chapters.values():
+            if ch.status == TaskStatus.FAILED:
+                ch.status = TaskStatus.QUEUED
+                ch.error_message = None
+                
+        await self.task_storage.save_task(task)
+        if task_id in self.tracker.tasks:
+            self.tracker.tasks[task_id] = task
+            
+        self._state_event.set()
+        logger.info(f"Task submitted: {task_id}")
+        return task
+
+    async def get_progress(self, provider_id: str, comic_id: str) -> Optional[DownloadTask]:
+        task_id = f"{provider_id}::{comic_id}"
+        mem_task = await self.tracker.load_task(task_id)
+        if mem_task:
+            return mem_task
+        return await self.task_storage.get_task(task_id)
+
     def pause_task(self, task_id: str) -> bool:
-        task = asyncio.run_coroutine_threadsafe(self.task_storage.get_task(task_id), asyncio.get_event_loop()).result()
-        if not task: return False
-        
-        if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
-            if task_id in self._cancellation_events:
-                self._cancellation_events[task_id].set()
-            task.status = TaskStatus.PAUSED
-            if task_id in self.tracker.tasks:
-                self.tracker.tasks[task_id].status = TaskStatus.PAUSED
-            asyncio.run_coroutine_threadsafe(self.task_storage.save_task(task), asyncio.get_event_loop())
-            return True
-        return False
-        
+        return asyncio.run_coroutine_threadsafe(self.pause_task_async(task_id), asyncio.get_event_loop()).result()
+
     async def pause_task_async(self, task_id: str) -> bool:
         task = await self.task_storage.get_task(task_id)
         if not task: return False
@@ -236,6 +239,7 @@ class ArchiveEngine:
             if task_id in self.tracker.tasks:
                 self.tracker.tasks[task_id].status = TaskStatus.PAUSED
             await self.task_storage.save_task(task)
+            self._state_event.set()
             return True
         return False
 
@@ -251,27 +255,24 @@ class ArchiveEngine:
             self.tracker.tasks[task_id].status = TaskStatus.QUEUED
             self.tracker.tasks[task_id].error_message = None
         await self.task_storage.save_task(task)
+        self._state_event.set()
         return True
 
     async def cancel_task_async(self, task_id: str) -> bool:
         task = await self.task_storage.get_task(task_id)
         if not task: return False
-            
-        if task.status == TaskStatus.DOWNLOADING:
-            if task_id in self._cancellation_events:
-                self._cancellation_events[task_id].set()
+        
+        if task_id in self._cancellation_events:
+            self._cancellation_events[task_id].set()
             
         task.status = TaskStatus.CANCELLED
+        if task_id in self.tracker.tasks:
+            self.tracker.tasks[task_id].status = TaskStatus.CANCELLED
         await self.task_storage.save_task(task)
+        
+        await self.library_storage.delete_comic(task.provider_id, task.comic_id)
+        self._state_event.set()
         return True
-
-    async def get_progress(self, provider_id: str, comic_id: str) -> Optional[DownloadTask]:
-        task_id = f"{provider_id}::{comic_id}"
-        # Read from memory if active, else from storage
-        mem_task = await self.tracker.load_task(task_id)
-        if mem_task:
-            return mem_task
-        return await self.task_storage.get_task(task_id)
 
     async def _flush_loop(self):
         while self._running:
@@ -297,15 +298,21 @@ class ArchiveEngine:
                         self.queue.task_done()
                         continue
 
-                    try:
-                        self.manager.use(job.provider_id)
-                        content, content_type = await self.manager.provider.download_image(client, job.url)
-                        await self.media_storage.save_image(
-                            job.provider_id, job.comic_id, job.chapter_id, job.page_index, content, content_type
-                        )
-                        await self.tracker.update_page_progress(job.task_id, job.chapter_id, 1)
-                    except Exception as e:
-                        logger.error(f"Failed to download page {job.page_index} for {job.chapter_id}: {e}")
+                    max_retries = 3
+                    for attempt in range(max_retries):
+                        try:
+                            self.manager.use(job.provider_id)
+                            content, content_type = await self.manager.provider.download_image(client, job.url)
+                            await self.media_storage.save_image(
+                                job.provider_id, job.comic_id, job.chapter_id, job.page_index, content, content_type
+                            )
+                            await self.tracker.update_page_progress(job.task_id, job.chapter_id, 1)
+                            break
+                        except Exception as e:
+                            if attempt == max_retries - 1:
+                                logger.error(f"Failed to download page {job.page_index} for {job.chapter_id} after {max_retries} attempts: {e}")
+                            else:
+                                await asyncio.sleep(1.0)
                         
                     self.queue.task_done()
                 except asyncio.CancelledError:
@@ -316,6 +323,7 @@ class ArchiveEngine:
     async def _coordinator_loop(self):
         while self._running:
             try:
+                # 1. Fill available coordinator slots
                 if len(self._active_coordinators) < self.max_concurrent_tasks:
                     tasks = await self.task_storage.list_tasks()
                     queued_tasks = [t for t in tasks if t.status == TaskStatus.QUEUED]
@@ -326,12 +334,16 @@ class ArchiveEngine:
                             break
                         if task.task_id not in self._active_coordinators:
                             self._start_task(task)
+                
+                # Wait for state change instead of polling blindly
+                await self._state_event.wait()
+                self._state_event.clear()
+                
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Coordinator loop error: {e}")
-                
-            await asyncio.sleep(2.0)
+                await asyncio.sleep(2.0) # Fallback sleep on error
 
     def _start_task(self, task: DownloadTask):
         cancel_event = asyncio.Event()
@@ -343,11 +355,15 @@ class ArchiveEngine:
     def _cleanup_task(self, task_id: str):
         self._active_coordinators.pop(task_id, None)
         self._cancellation_events.pop(task_id, None)
+        self._state_event.set()
 
     async def _process_task(self, task_id: str, cancel_event: asyncio.Event):
         task = await self.tracker.load_task(task_id)
         if not task: return
         
+        if cancel_event.is_set() or task.status == TaskStatus.PAUSED:
+            return
+            
         await self.tracker.update_task_status(task_id, TaskStatus.DOWNLOADING)
         
         try:
@@ -391,7 +407,6 @@ class ArchiveEngine:
                     checks = await asyncio.gather(*[_check(idx, img) for idx, img in enumerate(images)])
                     missing_images = [c for c in checks if c is not None]
 
-                    # Reset downloaded count in memory for accurate tracking via worker increments
                     task.chapters[ch_id].downloaded_pages = downloaded
                     await self.tracker.mark_dirty(task_id)
 
@@ -414,7 +429,9 @@ class ArchiveEngine:
                     await self.tracker.update_chapter_status(task_id, ch_id, TaskStatus.FAILED, error=str(e))
                     
             if cancel_event.is_set():
-                await self.tracker.update_task_status(task_id, TaskStatus.PAUSED)
+                task = await self.tracker.load_task(task_id)
+                if task.status == TaskStatus.DOWNLOADING:
+                    await self.tracker.update_task_status(task_id, TaskStatus.PAUSED)
             else:
                 task = await self.tracker.load_task(task_id)
                 all_done = all(c.status == TaskStatus.COMPLETED for c in task.chapters.values())
