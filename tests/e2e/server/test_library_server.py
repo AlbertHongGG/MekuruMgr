@@ -17,7 +17,7 @@ def test_library_server_search(provider, keyword, comic_id, server_helper: Serve
     data = server_helper.get("Search Library", "/api/v1/library/search", params={"keyword": f"Test Comic {comic_id}"})
     assert isinstance(data, list)
     assert len(data) >= 1
-    assert data[0]["comic_id"] == mock_library["comic_id"]
+    assert data[0]["id"] == mock_library["comic_id"]
     
     data2 = server_helper.get("Search Library (Empty)", "/api/v1/library/search", params={"keyword": "NonExistentKeyword123"})
     assert len(data2) == 0
@@ -29,7 +29,7 @@ def test_library_server_detail(provider, keyword, comic_id, server_helper: Serve
     c = mock_library["comic_id"]
     
     data = server_helper.get("Library Comic Detail", f"/api/v1/library/{p}/{c}")
-    assert data["comic_id"] == c
+    assert data["id"] == c
     assert data["title"] == f"Test Comic {c}"
     assert "cover.jpg" in data["cover_url"]
 
@@ -43,7 +43,7 @@ def test_library_server_chapters(provider, keyword, comic_id, server_helper: Ser
     chapters = server_helper.get("Library Chapters", f"/api/v1/library/{p}/{c}/chapters")
     assert isinstance(chapters, list)
     assert len(chapters) == 1
-    assert chapters[0]["chapter_id"] == ch
+    assert chapters[0]["id"] == ch
     
     images = server_helper.get("Library Chapter Images", f"/api/v1/library/{p}/{c}/chapters/{ch}")
     assert images["chapter_id"] == ch

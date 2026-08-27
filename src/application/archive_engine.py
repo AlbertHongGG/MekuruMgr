@@ -216,9 +216,11 @@ class ArchiveEngine:
         if not task: return False
         
         if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
-            if task.status == TaskStatus.DOWNLOADING and task_id in self._cancellation_events:
+            if task_id in self._cancellation_events:
                 self._cancellation_events[task_id].set()
             task.status = TaskStatus.PAUSED
+            if task_id in self.tracker.tasks:
+                self.tracker.tasks[task_id].status = TaskStatus.PAUSED
             asyncio.run_coroutine_threadsafe(self.task_storage.save_task(task), asyncio.get_event_loop())
             return True
         return False
@@ -228,9 +230,11 @@ class ArchiveEngine:
         if not task: return False
         
         if task.status in [TaskStatus.QUEUED, TaskStatus.DOWNLOADING]:
-            if task.status == TaskStatus.DOWNLOADING and task_id in self._cancellation_events:
+            if task_id in self._cancellation_events:
                 self._cancellation_events[task_id].set()
             task.status = TaskStatus.PAUSED
+            if task_id in self.tracker.tasks:
+                self.tracker.tasks[task_id].status = TaskStatus.PAUSED
             await self.task_storage.save_task(task)
             return True
         return False
@@ -243,6 +247,9 @@ class ArchiveEngine:
         task.status = TaskStatus.QUEUED
         task.error_message = None
         task.updated_at = datetime.now()
+        if task_id in self.tracker.tasks:
+            self.tracker.tasks[task_id].status = TaskStatus.QUEUED
+            self.tracker.tasks[task_id].error_message = None
         await self.task_storage.save_task(task)
         return True
 
