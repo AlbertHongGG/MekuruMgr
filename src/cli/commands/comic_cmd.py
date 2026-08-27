@@ -10,17 +10,15 @@ comic_app = typer.Typer(help="Manage comics (Fetch, Search, Explore, etc.)")
 
 @comic_app.command(name="fetch")
 def fetch_comic(
-    comic_id: str = typer.Argument(None, help="The ID of the comic to fetch. Uses env default if omitted."),
+    ctx: typer.Context,
+    comic_id: str = typer.Argument(..., help="The ID of the comic to fetch."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Fetch and display comic metadata."""
-    comic_id = comic_id or "7e68b404b74ffff98a9b77d4f24abefe"
+    container = ctx.obj
     provider_id = provider_id or container.config.default_provider
-    if not comic_id:
-        console.print("[bold red]Error:[/] No comic ID provided and no default in .env")
-        raise typer.Exit(1)
 
-    manager: IComicManager = container.comic_manager
+    manager = container.comic_manager
     manager.use(provider_id)
     with console.status(f"Fetching comic info for {comic_id} from {provider_id}...", spinner="dots"):
         comic = manager.fetch_comic_detail(comic_id)
@@ -29,14 +27,15 @@ def fetch_comic(
 
 @comic_app.command(name="list-chapters")
 def list_chapters(
-    comic_id: str = typer.Argument(None, help="The ID of the comic to fetch. Uses env default if omitted."),
+    ctx: typer.Context,
+    comic_id: str = typer.Argument(..., help="The ID of the comic to fetch."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Fetch and display all chapters of a comic."""
-    comic_id = comic_id or "7e68b404b74ffff98a9b77d4f24abefe"
+    container = ctx.obj
     provider_id = provider_id or container.config.default_provider
     
-    manager: IComicManager = container.comic_manager
+    manager = container.comic_manager
     manager.use(provider_id)
     with console.status(f"Fetching chapters for {comic_id} from {provider_id}...", spinner="dots"):
         chapters = manager.fetch_all_chapters(comic_id)
@@ -45,14 +44,16 @@ def list_chapters(
 
 @comic_app.command(name="search")
 def search_comic(
+    ctx: typer.Context,
     keyword: str = typer.Argument(..., help="The keyword to search for."),
     page: int = typer.Option(1, help="Page number."),
     page_size: int = typer.Option(30, help="Number of items per page."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Search for comics by keyword."""
+    container = ctx.obj
     provider_id = provider_id or container.config.default_provider
-    manager: IComicManager = container.comic_manager
+    manager = container.comic_manager
     manager.use(provider_id)
 
     with console.status(f"Searching for '{keyword}' from {provider_id}...", spinner="dots"):
@@ -63,13 +64,15 @@ def search_comic(
 
 @comic_app.command(name="list-images")
 def list_images(
+    ctx: typer.Context,
     comic_id: str = typer.Argument(..., help="The ID of the comic."),
     chapter_id: str = typer.Argument(..., help="The ID of the chapter."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Fetch and display all images of a specific chapter."""
+    container = ctx.obj
     provider_id = provider_id or container.config.default_provider
-    manager: IComicManager = container.comic_manager
+    manager = container.comic_manager
     manager.use(provider_id)
 
     with console.status(f"Fetching images for comic {comic_id}, chapter {chapter_id}...", spinner="dots"):
@@ -79,13 +82,15 @@ def list_images(
 
 @comic_app.command(name="explore")
 def explore_comic(
+    ctx: typer.Context,
     page: int = typer.Option(1, help="Page number."),
     page_size: int = typer.Option(30, help="Number of items per page."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Explore/discover comics from the provider."""
+    container = ctx.obj
     provider_id = provider_id or container.config.default_provider
-    manager: IComicManager = container.comic_manager
+    manager = container.comic_manager
     manager.use(provider_id)
 
     with console.status(f"Exploring comics from {provider_id}...", spinner="dots"):

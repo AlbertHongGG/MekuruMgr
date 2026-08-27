@@ -69,4 +69,16 @@ class ProviderRegistry:
                 except Exception as e:
                     logger.error(f"Failed to load provider module {module_name}: {e}")
 
+        # Automatically register all discovered subclasses
+        for p_class in BaseComicProvider.__subclasses__():
+            try:
+                # Instantiate temporarily to get metadata (since they are properties)
+                temp = p_class()
+                pid = str(temp.provider_id.value) if hasattr(temp.provider_id, 'value') else str(temp.provider_id)
+                
+                if pid not in self._provider_classes:
+                    self.register(provider_id=pid, provider_class=p_class, aliases=temp.aliases)
+            except Exception as e:
+                logger.error(f"Failed to auto-register provider class {p_class.__name__}: {e}")
+
 registry = ProviderRegistry()

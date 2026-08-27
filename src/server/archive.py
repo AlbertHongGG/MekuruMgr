@@ -4,7 +4,7 @@ from typing import List
 from src.core.container import AppContainer
 from src.domain.models.archive import LibraryComic, DownloadTask, TaskStatus
 from src.application.archive_engine import ArchiveEngine
-from src.server.deps import resolve_provider
+from src.server.dependencies import resolve_provider
 
 
 archive_router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])

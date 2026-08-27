@@ -143,14 +143,3 @@ class ManwaProvider(BaseComicProvider):
             return response.content, response.headers.get('content-type', '')
 
 from src.core.registry import registry
-
-# Legacy compatibility for registry
-_temp_instance = ManwaProvider()
-_provider_id = _temp_instance.provider_id
-_provider_id = str(_provider_id.value) if hasattr(_provider_id, 'value') else str(_provider_id)
-registry.register(
-    provider_id=_provider_id,
-    provider_class=ManwaProvider,
-    aliases=_temp_instance.aliases
-)
-

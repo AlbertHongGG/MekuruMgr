@@ -6,7 +6,7 @@ import urllib.parse
 from src.core.interfaces import ILibraryService
 from src.domain.models import LocalComicItem, LocalComicDetail, LocalChapterImages, LocalChapterItem, LibraryComic
 from src.domain.exceptions import AppBaseError
-from src.server.deps import get_library_service, get_container, resolve_provider
+from src.server.dependencies import get_library_service, get_container, resolve_provider
 
 library_router = APIRouter(prefix="/api/v1/library", tags=["Library"])
 

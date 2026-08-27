@@ -24,18 +24,13 @@ def resolve_provider(container, provider_id: str) -> str:
         raise typer.Exit(1)
 @archive_app.command(name="track")
 def track_comic(ctx: typer.Context, 
-    comic_id: str = typer.Argument(None, help="The ID of the comic to track. Uses env default if omitted."),
+    comic_id: str = typer.Argument(..., help="The ID of the comic to track."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Add a comic to the local tracking library (fetch metadata only)."""
     container = ctx.obj
-    comic_id = comic_id or "7e68b404b74ffff98a9b77d4f24abefe"
     provider_id = resolve_provider(container, provider_id)
-    if not comic_id:
-        archive_view.render_error("No comic ID provided and no default in .env")
-        raise typer.Exit(1)
-        
-    container = ctx.obj
+    
     qs = container.archive_engine
     
     with console.status(f"[cyan]Tracking comic {comic_id} from {provider_id}...[/cyan]", spinner="dots"):
@@ -75,18 +70,13 @@ async def _sync_and_wait(qs: ArchiveEngine, provider_id: str, comic_id: str):
 
 @archive_app.command(name="sync")
 def sync_comic(ctx: typer.Context, 
-    comic_id: str = typer.Argument(None, help="The ID of the comic to sync. Uses env default if omitted."),
+    comic_id: str = typer.Argument(..., help="The ID of the comic to sync."),
     provider_id: str = typer.Option(None, "--provider", "-p", help="Provider ID. Uses env default if omitted.")
 ):
     """Perform an incremental sync (adds to queue and starts downloading)."""
     container = ctx.obj
-    comic_id = comic_id or "7e68b404b74ffff98a9b77d4f24abefe"
     provider_id = resolve_provider(container, provider_id)
-    if not comic_id:
-        archive_view.render_error("No comic ID provided and no default in .env")
-        raise typer.Exit(1)
-        
-    container = ctx.obj
+    
     qs = container.archive_engine
     
     try:

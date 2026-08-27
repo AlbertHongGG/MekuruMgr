@@ -1,7 +1,7 @@
 import typer
 import asyncio
 from src.core.container import AppContainer
-from src.cli.commands import comic_cmd, archive_cmd, library_cmd, config_cmd
+from src.cli.commands import comic_cmd, archive_cmd, library_cmd
 
 app = typer.Typer(
     help="ComicMgr CLI - Manage your comic downloads and library",
@@ -11,7 +11,6 @@ app = typer.Typer(
 app.add_typer(comic_cmd.comic_app, name="comic")
 app.add_typer(archive_cmd.archive_app, name="archive")
 app.add_typer(library_cmd.library_app, name="library")
-app.add_typer(config_cmd.config_app, name="config")
 
 @app.callback()
 def main(

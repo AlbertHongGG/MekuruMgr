@@ -126,14 +126,3 @@ class ComicWifiProvider(BaseComicProvider):
             raise ApiLogicError(f"Failed to explore comics: {str(e)}")
 
 # Register this provider automatically when the module is imported
-
-# Legacy compatibility for registry
-_temp_instance = ComicWifiProvider()
-_provider_id = _temp_instance.provider_id
-_provider_id = str(_provider_id.value) if hasattr(_provider_id, 'value') else str(_provider_id)
-registry.register(
-    provider_id=_provider_id,
-    provider_class=ComicWifiProvider,
-    aliases=_temp_instance.aliases
-)
-

@@ -151,15 +151,3 @@ class CopymangaProvider(BaseComicProvider):
         return response.content, content_type
 
 # Register the provider
-
-# Legacy compatibility for registry
-_temp_instance = CopymangaProvider()
-_provider_id = _temp_instance.provider_id
-_provider_id = str(_provider_id.value) if hasattr(_provider_id, 'value') else str(_provider_id)
-registry.register(
-    provider_id=_provider_id,
-    provider_class=CopymangaProvider,
-    aliases=_temp_instance.aliases
-)
-
-
