@@ -8,7 +8,7 @@ from src.domain.models.archive import DownloadTask
 class IComicManager(ABC):
     @property
     @abstractmethod
-    def active_provider(self) -> Any:
+    def provider(self) -> Any:
         pass
         
     @abstractmethod
