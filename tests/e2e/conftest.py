@@ -57,8 +57,9 @@ def setup_test_environment():
         except Exception as e:
             print(f"Failed to dump json: {e}")
             
-    for p_id, provider_class in registry.get_all_classes().items():
-        pass # We mock hooks globally later_dump_json_hook)
+    from src.core.http_client import BaseHttpClient
+    BaseHttpClient.clear_global_hooks()
+    BaseHttpClient.add_global_hook(_dump_json_hook)
         
     yield
 
